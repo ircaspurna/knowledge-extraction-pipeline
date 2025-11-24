@@ -1,0 +1,100 @@
+# Custom Domain Configuration Example
+# Customize this file for your specific domain
+
+# Example: Medical Research Domain
+# Uncomment and modify for your needs
+
+extraction_prompt: |
+  You are a specialized research assistant extracting key concepts from domain-specific texts.
+
+  Extract important concepts from this passage. For EACH concept, provide:
+
+  1. **Term**: The exact phrase from the text (prefer standard terminology)
+  2. **Definition**: One clear sentence defining the concept
+  3. **Category**: Choose one that fits your domain
+  4. **Importance**: critical | high | medium | low
+  5. **Justification**: One sentence explaining importance
+  6. **Quote**: Exact quote from passage (max 100 words)
+
+  **Domain-Specific Categories** (customize these):
+  - theory | method | phenomenon | tool | principle | finding | application
+
+  **Domain Rules**:
+  - Use standard terminology where applicable
+  - Note any domain-specific identifiers (codes, standards, etc.)
+  - Flag novel or controversial concepts
+  - Preserve technical precision
+
+  **Passage**:
+  {passage}
+
+  Extract concepts (JSON format):
+
+# Validation prompt (optional)
+validation_prompt: |
+  Validate this extracted concept for domain accuracy:
+
+  **Concept**: {term}
+  **Definition**: {definition}
+  **Quote**: "{quote}"
+  **Original Passage**: {passage}
+
+  Domain-specific checks:
+  1. Is terminology standard/accepted in the field?
+  2. Is the definition technically accurate?
+  3. Is the quote sufficient evidence?
+  4. Are there any domain-specific concerns?
+
+  Respond with validation results (JSON):
+
+# Custom categories for your domain
+categories:
+  - theory
+  - method
+  - phenomenon
+  - tool
+  - principle
+  - finding
+  - application
+
+# Importance criteria (customize for your domain)
+importance_criteria:
+  critical:
+    - Fundamental principles
+    - Widely-cited theories
+    - Breakthrough findings
+  high:
+    - Important methodologies
+    - Significant discoveries
+    - Key applications
+  medium:
+    - Supporting concepts
+    - Incremental advances
+    - Standard techniques
+  low:
+    - Minor details
+    - Common knowledge
+    - Background information
+
+# Known domain-specific aliases (add your own)
+known_aliases:
+  # Example: Add common abbreviations in your field
+  # ML: Machine Learning
+  # AI: Artificial Intelligence
+  # NLP: Natural Language Processing
+
+# Entity resolution settings
+entity_resolution:
+  # How similar terms must be to merge (0.0 - 1.0)
+  # Higher = more strict (fewer merges)
+  # Lower = more lenient (more merges)
+  similarity_threshold: 0.90
+
+  # Threshold for flagging ambiguous pairs
+  ambiguous_threshold: 0.85
+
+# Notes for customization:
+# 1. Start with your domain's most common concept types
+# 2. Add standard terminology and abbreviations
+# 3. Adjust similarity thresholds based on domain specificity
+# 4. Test on sample documents and iterate

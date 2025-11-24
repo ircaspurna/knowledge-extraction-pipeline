@@ -1,0 +1,592 @@
+# Prompts Configuration - Knowledge Extraction Pipeline
+# Version: 2.1
+# Last Updated: 2025-11-03
+# Optimized for Claude Sonnet 4
+#
+# DOMAIN-AWARE PROMPTS:
+# This file contains template prompts with placeholders that are filled
+# from config/domains.yaml based on the selected domain.
+#
+# Template variables:
+#   {domain_categories} - Injected categories (core + domain_specific)
+#   {domain_examples}   - Domain-specific extraction examples
+#   {domain_rules}      - Domain-specific extraction rules
+#
+# See config/domains.yaml for domain configurations.
+
+metadata:
+  version: "2.1"
+  model: "claude-sonnet-4-5-20250929"
+  temperature: 0.0
+  max_tokens: 2000
+  domain_aware: true
+  requires_domain_config: true
+
+# ==============================================================================
+# CONCEPT EXTRACTION - Multi-shot with Chain-of-Thought
+# ==============================================================================
+
+concept_extraction:
+  system: |
+    You are an expert research assistant specializing in knowledge extraction
+    from academic texts. Your task is to identify key concepts with high
+    precision and proper evidence.
+
+    Quality standards:
+    - Only extract concepts explicitly discussed in the passage
+    - Provide exact quotes as evidence (verbatim)
+    - Distinguish between concepts and examples
+    - Use domain-appropriate terminology
+    - Be conservative: better to miss a concept than extract noise
+
+  user_template: |
+    Extract key concepts from the following passage. For each concept:
+
+    1. **Term**: Exact phrase from text (prefer 2-5 words)
+    2. **Definition**: One clear, self-contained sentence
+    3. **Category**: {domain_categories}
+    4. **Importance**: critical | high | medium | low
+    5. **Justification**: Why this importance level (1 sentence)
+    6. **Quote**: Verbatim evidence (max 100 words)
+
+    **CRITICAL RULES**:
+    {domain_rules}
+
+# ==============================================================================
+# DISSERTATION CONTEXT EXTRACTION - Permissive Mode for Research Context
+# ==============================================================================
+# Use this mode for dissertation research when you need to capture:
+# - Research methods (even if briefly mentioned)
+# - Key findings and results
+# - Problems, critiques, and limitations
+# - Evaluative statements about approaches/theories
+# This mode is MORE PERMISSIVE than standard extraction.
+
+dissertation_context_extraction:
+  system: |
+    You are an expert research assistant helping with dissertation research on
+    deception detection and "the lying code". Your task is to extract contextual
+    information that's useful for understanding research approaches, findings,
+    problems, and evaluations - even if not fully explained.
+
+    Priority extraction targets:
+    - Research methods and approaches
+    - Key findings and results
+    - Problems, limitations, and critiques
+    - Evaluative statements about theories/approaches
+    - Context relevant to understanding deception detection research
+
+  user_template: |
+    Extract research context from the following passage. For each piece of information:
+
+    1. **Term**: Method, finding, problem, or concept name (2-5 words)
+    2. **Definition**: What it is, what they found, or what the issue is
+    3. **Category**: method | finding | problem | critique | evaluation | concept | tool
+    4. **Importance**: critical | high | medium | low
+    5. **Justification**: Why relevant to deception detection research
+    6. **Quote**: Supporting quote from text (max 100 words)
+
+    **PERMISSIVE RULES** (extract more contextual information):
+    ✓ Extract methods EVEN IF only briefly mentioned or referenced
+    ✓ Extract findings/results even if not fully explained
+    ✓ Extract problems, limitations, or critiques mentioned
+    ✓ Extract evaluative statements about approaches/theories
+    ✓ Extract concepts with clear contextual meaning (not just definitions)
+    ✓ Extract what authors say "didn't work" or "was problematic"
+    ✓ Extract comparative statements (X vs Y)
+    ✗ Skip pure citations without any contextual information
+    ✗ Skip author names and affiliations alone
+
+    **CATEGORIES EXPANDED**:
+    - **method**: Research method, technique, approach, procedure (e.g., "interview protocol", "linguistic analysis", "LIWC coding")
+    - **finding**: Result, observation, outcome (e.g., "liars showed more pauses", "accuracy was 61%")
+    - **problem**: Issue, limitation, failure, critique (e.g., "low ecological validity", "assumption violated", "method failed to detect")
+    - **critique**: Evaluation of other work, identified weakness (e.g., "prior studies lacked control groups")
+    - **evaluation**: Assessment, judgment about effectiveness (e.g., "approach showed promise but...", "method outperformed baseline")
+    - **concept**: Theory, phenomenon, principle (traditional concepts)
+    - **tool**: Software, instrument, measure (e.g., "Reality Monitoring framework", "CBCA criteria")
+
+    **EXAMPLES FOR DISSERTATION CONTEXT**:
+
+    Example 1 (Extract METHOD even if brief):
+    Passage: "We used the verifiability approach to code statements for checkable details."
+
+    ✓ EXTRACT:
+    {
+      "term": "Verifiability Approach",
+      "definition": "Method for coding statements based on checkable details that can be verified.",
+      "category": "method",
+      "importance": "medium",
+      "justification": "Core deception detection method used in the study.",
+      "quote": "We used the verifiability approach to code statements for checkable details."
+    }
+
+    Example 2 (Extract FINDING):
+    Passage: "Truth-tellers provided significantly more verifiable details (M=12.4) than liars (M=7.2), t(98)=3.45, p<.01."
+
+    ✓ EXTRACT:
+    {
+      "term": "Verifiable Details Difference",
+      "definition": "Truth-tellers provided nearly twice as many verifiable details compared to liars (12.4 vs 7.2).",
+      "category": "finding",
+      "importance": "high",
+      "justification": "Key empirical result showing discriminative power of verifiable details.",
+      "quote": "Truth-tellers provided significantly more verifiable details (M=12.4) than liars (M=7.2), t(98)=3.45, p<.01."
+    }
+
+    Example 3 (Extract PROBLEM/CRITIQUE):
+    Passage: "A major limitation of CBCA is its reliance on subjective judgment, leading to inconsistent results across raters."
+
+    ✓ EXTRACT:
+    {
+      "term": "CBCA Subjectivity Problem",
+      "definition": "CBCA relies on subjective judgment, causing inconsistent inter-rater reliability.",
+      "category": "problem",
+      "importance": "high",
+      "justification": "Fundamental limitation affecting reliability of CBCA as deception detection method.",
+      "quote": "A major limitation of CBCA is its reliance on subjective judgment, leading to inconsistent results across raters."
+    }
+
+    Example 4 (Extract EVALUATION):
+    Passage: "Despite initial promise, linguistic complexity measures failed to reliably distinguish truth from lies in our meta-analysis."
+
+    ✓ EXTRACT:
+    {
+      "term": "Linguistic Complexity Ineffectiveness",
+      "definition": "Linguistic complexity measures did not reliably distinguish truth from lies in meta-analytic evidence.",
+      "category": "evaluation",
+      "importance": "high",
+      "justification": "Important negative finding about effectiveness of linguistic approach to deception detection.",
+      "quote": "Despite initial promise, linguistic complexity measures failed to reliably distinguish truth from lies in our meta-analysis."
+    }
+
+    Example 5 (Extract TOOL/FRAMEWORK):
+    Passage: "We applied Reality Monitoring criteria including perceptual details, contextual information, and cognitive operations."
+
+    ✓ EXTRACT:
+    {
+      "term": "Reality Monitoring",
+      "definition": "Framework for analyzing statements based on perceptual details, contextual information, and cognitive operations.",
+      "category": "tool",
+      "importance": "medium",
+      "justification": "Established analytical framework used in deception detection research.",
+      "quote": "We applied Reality Monitoring criteria including perceptual details, contextual information, and cognitive operations."
+    }
+
+    **REASONING PROCESS**:
+    1. Does this describe a METHOD, FINDING, PROBLEM, or EVALUATION?
+    2. Is it relevant to understanding deception detection research?
+    3. Would a dissertation reader benefit from knowing this context?
+    4. Can I extract a supporting quote?
+    5. Even if brief, does it provide useful research context?
+
+    **OUTPUT FORMAT** (JSON only, no markdown):
+    {{
+      "concepts": [
+        {{
+          "term": "...",
+          "definition": "...",
+          "category": "...",
+          "importance": "...",
+          "justification": "...",
+          "quote": "..."
+        }}
+      ],
+      "reasoning": "Brief explanation of what contextual information was extracted (2-3 sentences)"
+    }}
+
+    **Passage**:
+    {passage}
+
+    Extract research context:
+
+  # More permissive filters for dissertation context
+  filters:
+    min_word_count: 15  # Lower threshold
+    max_concepts_per_chunk: 15  # Allow more per chunk
+    min_quote_length: 10
+    max_quote_length: 150  # Allow longer quotes for context
+    skip_patterns:
+      - "^PAGE \\d+$"
+      - "^={20,}$"
+      - "^Chapter \\d+$"
+      - "^\\d+\\.\\s+References"
+      - "^\\w+\\s+\\d+$"
+
+# ==============================================================================
+# STANDARD CONCEPT EXTRACTION (CONSERVATIVE)
+# ==============================================================================
+# This is the original conservative extraction mode.
+# Use dissertation_context_extraction above for dissertation research.
+
+concept_extraction_conservative:
+  system: |
+    You are an expert research assistant specializing in knowledge extraction
+    from academic texts. Your task is to identify key concepts with high
+    precision and proper evidence.
+
+    Quality standards:
+    - Only extract concepts explicitly discussed in the passage
+    - Provide exact quotes as evidence (verbatim)
+    - Distinguish between concepts and examples
+    - Use domain-appropriate terminology
+    - Be conservative: better to miss a concept than extract noise
+
+  user_template: |
+    Extract key concepts from the following passage. For each concept:
+
+    1. **Term**: Exact phrase from text (prefer 2-5 words)
+    2. **Definition**: One clear, self-contained sentence
+    3. **Category**: {domain_categories}
+    4. **Importance**: critical | high | medium | low
+    5. **Justification**: Why this importance level (1 sentence)
+    6. **Quote**: Verbatim evidence (max 100 words)
+
+    **CRITICAL RULES**:
+    {domain_rules}
+
+    **DOMAIN-SPECIFIC EXAMPLES**:
+    {domain_examples}
+
+    **GENERAL EXAMPLES**:
+
+    Example (INCORRECT - Don't extract examples):
+    Passage: "Loss aversion is illustrated by people's reluctance to sell
+    stocks at a loss. For instance, investors often hold losing positions
+    too long, hoping to break even."
+
+    ✗ DO NOT extract "reluctance to sell stocks" - this is an EXAMPLE of loss aversion
+    ✓ ONLY extract "Loss Aversion" if it's defined
+
+    Example (INCORRECT - Mention without explanation):
+    Passage: "As noted by Kahneman (1979), prospect theory provides a framework..."
+
+    ✗ DO NOT extract "Prospect Theory" - just mentioned, not explained
+
+    **REASONING PROCESS** (think through these):
+    1. Is this concept EXPLAINED in the passage? (not just mentioned)
+    2. Is this the CONCEPT or an EXAMPLE of a concept?
+    3. Can I extract a verbatim quote that supports this?
+    4. Is this concept DISTINCT from others I've extracted?
+    5. Would an expert in this field recognize this as a key concept?
+
+    **OUTPUT FORMAT** (JSON only, no markdown):
+    {{
+      "concepts": [
+        {{
+          "term": "...",
+          "definition": "...",
+          "category": "...",
+          "importance": "...",
+          "justification": "...",
+          "quote": "..."
+        }}
+      ],
+      "reasoning": "Brief explanation of extraction decisions (2-3 sentences)"
+    }}
+
+    **Passage**:
+    {passage}
+
+    Extract concepts:
+
+  # Quality filters (can be overridden by domain config)
+  filters:
+    min_word_count: 20
+    max_concepts_per_chunk: 10  # Overridden by domain.extraction_params.max_concepts_per_chunk
+    min_quote_length: 10
+    max_quote_length: 100
+    skip_patterns:
+      - "^PAGE \\d+$"
+      - "^={20,}$"
+      - "^Chapter \\d+$"
+      - "^\\d+\\.\\s+References"
+      - "^\\w+\\s+\\d+$"
+
+# ==============================================================================
+# CONCEPT VALIDATION - Rigorous Quality Checks
+# ==============================================================================
+
+concept_validation:
+  system: |
+    You are a quality assurance expert validating concept extractions.
+    Be strict: invalid extractions harm knowledge base quality.
+
+    Validation hierarchy (all must pass):
+    1. Quote accuracy (VERBATIM match)
+    2. Definition accuracy (matches term semantically)
+    3. Evidence sufficiency (quote supports definition)
+
+  user_template: |
+    Validate this extracted concept with STRICT criteria:
+
+    **Concept**:
+    - Term: {term}
+    - Definition: {definition}
+    - Quote: "{quote}"
+
+    **Original Passage**:
+    {passage}
+
+    **Validation Checklist**:
+
+    1. **Quote Accuracy**: Is the quote VERBATIM from the passage?
+       - Check character-by-character (ignoring whitespace)
+       - Quotes must be exact, not paraphrased
+       - Minor differences (e.g., punctuation) are acceptable
+
+    2. **Definition Accuracy**: Does the definition correctly describe the term?
+       - Definition should capture essence of concept
+       - Should not be too broad or too narrow
+       - Should match how concept is used in passage
+
+    3. **Evidence Sufficiency**: Does the quote adequately support the concept?
+       - Quote should make concept clear
+       - Should not require additional context to understand
+       - Should be the best evidence available in passage
+
+    4. **Concept Validity**: Is this actually a concept (not an example)?
+       - Concepts are abstract principles, methods, or phenomena
+       - Examples illustrate concepts but are not concepts themselves
+
+    **Common Issues to Check**:
+    - ✗ Quote paraphrased instead of exact
+    - ✗ Definition too vague ("a way of doing X")
+    - ✗ Quote is example, not definition
+    - ✗ Concept is too specific (should be general principle)
+
+    **Output** (JSON only):
+    {{
+      "quote_accurate": true/false,
+      "definition_accurate": true/false,
+      "evidence_sufficient": true/false,
+      "concept_valid": true/false,
+      "overall_valid": true/false,
+      "confidence": 0.0-1.0,
+      "issues": ["list specific problems found"],
+      "suggestion": "How to improve if invalid (optional)"
+    }}
+
+    Validate:
+
+# ==============================================================================
+# ENTITY RESOLUTION - Semantic Deduplication with Reasoning
+# ==============================================================================
+
+entity_resolution:
+  system: |
+    You are an expert in semantic entity resolution. Your job is to determine
+    if two concepts refer to the same underlying entity.
+
+    Consider:
+    - Synonyms and abbreviations (ML = Machine Learning → SAME)
+    - Hierarchical relationships (Deep Learning ⊂ Machine Learning → DIFFERENT)
+    - Context-dependent usage (same term, different meanings → DIFFERENT)
+    - Spelling variations (Loss Aversion = Loss-Aversion → SAME)
+
+  user_template: |
+    Determine if these concepts refer to the SAME entity or are DIFFERENT.
+
+    **Concept A**:
+    - Term: {term_a}
+    - Definition: {definition_a}
+    - Context: {context_a}
+
+    **Concept B**:
+    - Term: {term_b}
+    - Definition: {definition_b}
+    - Context: {context_b}
+
+    **Decision Rules**:
+
+    SAME if:
+    ✓ One is abbreviation of other (ML vs Machine Learning)
+    ✓ Spelling variations (Loss Aversion vs Loss-Aversion)
+    ✓ Synonyms with identical meaning (Heuristic = Rule of Thumb)
+    ✓ Different phrasings of same concept
+
+    DIFFERENT if:
+    ✗ Hierarchical relationship (Neural Networks ⊂ Deep Learning)
+    ✗ Related but distinct (Anchoring ≠ Framing)
+    ✗ Same term, different contexts (Bias in ML ≠ Cognitive Bias)
+    ✗ One is specific instance of general concept
+
+    **Examples**:
+
+    Example 1: SAME
+    A: "Machine Learning" - "Algorithms that improve through experience"
+    B: "ML" - "Algorithms that learn from data"
+    → SAME (abbreviation, equivalent definitions)
+
+    Example 2: DIFFERENT
+    A: "Neural Networks" - "Computing systems inspired by biological neurons"
+    B: "Deep Learning" - "Neural networks with multiple layers"
+    → DIFFERENT (deep learning is subset of neural networks)
+
+    Example 3: SAME
+    A: "Loss Aversion" - "Losses loom larger than gains"
+    B: "Loss-Aversion" - "People weight losses more heavily than gains"
+    → SAME (spelling variation, equivalent meaning)
+
+    Example 4: DIFFERENT
+    A: "Bias" - "Systematic error in machine learning models"
+    B: "Cognitive Bias" - "Systematic error in human judgment"
+    → DIFFERENT (same term, different domains)
+
+    **Reasoning Process**:
+    1. Compare definitions - do they describe the same thing?
+    2. Check term relationship - abbreviation, synonym, or distinct?
+    3. Consider context - same domain and usage?
+    4. Make final decision with confidence score
+
+    **Output** (JSON only):
+    {{
+      "decision": "SAME" or "DIFFERENT",
+      "confidence": 0.0-1.0,
+      "reasoning": "Step-by-step explanation",
+      "relationship_type": "abbreviation" | "synonym" | "spelling_variation" | "hierarchical" | "related" | "unrelated",
+      "canonical_term": "Which term to use as primary (if SAME)"
+    }}
+
+    Decide:
+
+# ==============================================================================
+# RELATIONSHIP EXTRACTION - Typed, Directional Relationships
+# ==============================================================================
+
+relationship_extraction:
+  system: |
+    You are an expert in extracting semantic relationships between concepts.
+    Your task is to identify the TYPE and DIRECTION of relationships.
+
+    Be conservative: only extract relationships that are explicitly stated
+    or strongly implied in the text.
+
+  user_template: |
+    Analyze the relationship between these two concepts based on the context.
+
+    **Concept A**: {term_a}
+    Definition: {definition_a}
+
+    **Concept B**: {term_b}
+    Definition: {definition_b}
+
+    **Context** (passage where both appear):
+    {context}
+
+    **Relationship Types**:
+
+    1. **CAUSES**: A directly causes B
+       Example: "Loss aversion CAUSES reluctance to realize losses"
+
+    2. **ENABLES**: A makes B possible or easier
+       Example: "Heuristics ENABLE fast decision-making"
+
+    3. **PREVENTS**: A blocks or inhibits B
+       Example: "Awareness of bias PREVENTS automatic responses"
+
+    4. **REQUIRES**: A needs B as prerequisite
+       Example: "Metacognition REQUIRES self-awareness"
+
+    5. **CONTRADICTS**: A is incompatible with B
+       Example: "System 1 thinking CONTRADICTS deliberate reasoning"
+
+    6. **EXTENDS**: A builds upon or generalizes B
+       Example: "Prospect Theory EXTENDS Expected Utility Theory"
+
+    7. **PART_OF**: A is component/subset of B
+       Example: "Loss Aversion PART_OF Prospect Theory"
+
+    8. **EXAMPLE_OF**: A exemplifies B
+       Example: "Anchoring EXAMPLE_OF cognitive bias"
+
+    9. **RELATED**: A and B are associated but relationship unclear
+       Example: "Framing RELATED decision-making"
+
+    **Extraction Rules**:
+    ✓ Relationship must be stated or strongly implied in context
+    ✓ Determine direction: A→B, B→A, or bidirectional
+    ✓ Choose most specific type (CAUSES > ENABLES > RELATED)
+    ✗ Don't infer relationships not supported by text
+    ✗ Don't extract "RELATED" unless no specific type fits
+
+    **Examples**:
+
+    Example 1:
+    Context: "Loss aversion explains why framing effects are so powerful."
+    A: Loss Aversion, B: Framing Effect
+    → Type: ENABLES, Direction: A→B, Strength: 0.85
+
+    Example 2:
+    Context: "System 1 and System 2 represent different modes of thinking."
+    A: System 1, B: System 2
+    → Type: CONTRADICTS, Direction: Bidirectional, Strength: 0.7
+
+    Example 3:
+    Context: "Anchoring is one of many cognitive biases."
+    A: Anchoring, B: Cognitive Bias
+    → Type: EXAMPLE_OF, Direction: A→B, Strength: 0.95
+
+    **Output** (JSON only):
+    {{
+      "has_relationship": true/false,
+      "relationship_type": "CAUSES|ENABLES|PREVENTS|REQUIRES|CONTRADICTS|EXTENDS|PART_OF|EXAMPLE_OF|RELATED|NONE",
+      "direction": "A_to_B" | "B_to_A" | "bidirectional",
+      "strength": 0.0-1.0,
+      "explanation": "One sentence explaining the relationship",
+      "evidence_quote": "Exact quote from context supporting this",
+      "confidence": 0.0-1.0
+    }}
+
+    Extract relationship:
+
+# ==============================================================================
+# QUALITY CONTROL
+# ==============================================================================
+
+quality_control:
+  extraction:
+    min_confidence: 0.5
+    require_validation: true
+    max_validation_failures: 2
+
+  resolution:
+    min_similarity_for_auto_merge: 0.95
+    min_similarity_for_llm_review: 0.85
+    prefer_longer_definitions: true
+
+  relationships:
+    min_strength: 0.6
+    require_explicit_evidence: true
+    max_hops_for_inference: 0  # Don't infer transitive relationships
+
+# ==============================================================================
+# EVALUATION PROMPTS
+# ==============================================================================
+
+gold_standard_comparison:
+  system: |
+    You are evaluating extracted concepts against a gold standard.
+
+  user_template: |
+    Compare the extracted concept to the gold standard annotation.
+
+    **Extracted**:
+    Term: {extracted_term}
+    Definition: {extracted_definition}
+
+    **Gold Standard**:
+    Term: {gold_term}
+    Definition: {gold_definition}
+
+    Evaluate:
+    1. Is this the same concept? (account for synonyms/variations)
+    2. Is the definition semantically equivalent?
+    3. Overall match quality?
+
+    **Output** (JSON):
+    {{
+      "is_match": true/false,
+      "semantic_similarity": 0.0-1.0,
+      "notes": "Explanation of decision"
+    }}

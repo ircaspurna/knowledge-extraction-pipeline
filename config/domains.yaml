@@ -1,0 +1,304 @@
+# Domain Configurations for Knowledge Extraction
+# Version: 2.1
+# Last Updated: 2025-11-03
+
+metadata:
+  version: "2.1"
+  description: "Domain-specific configurations for concept extraction"
+
+# ==============================================================================
+# DOMAIN DEFINITIONS
+# ==============================================================================
+
+domains:
+  # --------------------------------------------------------------------------
+  # GENERAL / DEFAULT DOMAIN
+  # --------------------------------------------------------------------------
+  general:
+    name: "General Academic"
+    description: "Balanced extraction for cross-disciplinary academic texts"
+
+    categories:
+      core: [theory, method, phenomenon, principle, metric, tool, concept]
+      domain_specific: []
+
+    extraction_params:
+      require_definition: false  # Extract concepts used in context
+      require_explanation: true  # Ensure quality, not just mentions
+      extract_mentioned_only: false
+      max_concepts_per_chunk: 10
+      min_explanation_words: 15
+
+    examples:
+      - term: "Paradigm Shift"
+        definition: "A fundamental change in the basic concepts and practices of a scientific discipline."
+        category: "phenomenon"
+        passage: "Kuhn described paradigm shifts as revolutionary changes in scientific worldviews..."
+
+  # --------------------------------------------------------------------------
+  # PSYCHOLOGY & COGNITIVE SCIENCE
+  # --------------------------------------------------------------------------
+  psychology:
+    name: "Psychology & Cognitive Science"
+    description: "Optimized for psychology, behavioral science, cognitive science"
+
+    categories:
+      core: [theory, method, phenomenon, principle, metric, tool]
+      domain_specific: [bias, heuristic, cognitive_process, disorder, treatment, assessment]
+
+    extraction_params:
+      require_definition: false  # Extract known concepts even if not defined in THIS paper
+      require_explanation: true  # Keep - ensures quality, not just mentions
+      extract_mentioned_only: false
+      max_concepts_per_chunk: 8
+      min_explanation_words: 15
+      extract_abbreviations: true  # e.g., CBT, PTSD
+
+    examples:
+      - term: "Loss Aversion"
+        definition: "The tendency for losses to loom larger than equivalent gains in people's evaluations."
+        category: "bias"
+        passage: "Loss aversion describes the tendency for losses to loom larger than equivalent gains..."
+
+      - term: "Anchoring Bias"
+        definition: "The tendency to rely too heavily on the first piece of information offered."
+        category: "bias"
+        passage: "Anchoring bias occurs when people rely too heavily on the first piece of information..."
+
+      - term: "Cognitive Load Theory"
+        definition: "A framework explaining how working memory limitations affect learning."
+        category: "theory"
+        passage: "Cognitive load theory posits that working memory has limited capacity..."
+
+  # --------------------------------------------------------------------------
+  # PSYCHOLINGUISTICS & DECEPTION DETECTION
+  # --------------------------------------------------------------------------
+  psycholinguistics:
+    name: "Psycholinguistics & Deception Detection"
+    description: "Optimized for linguistic analysis, deception detection, psycholinguistics, computational linguistics"
+
+    categories:
+      core: [theory, method, phenomenon, principle, metric, tool]
+      domain_specific: [
+        # Psychology
+        bias, heuristic, cognitive_process,
+        # Linguistics
+        linguistic_feature, lexical_property, syntactic_pattern, semantic_relation, discourse_structure,
+        # Computational
+        algorithm, model, architecture, classifier, feature_set
+      ]
+
+    extraction_params:
+      require_definition: false  # Extract known concepts used in context
+      require_explanation: true  # Ensure quality, not just mentions
+      extract_mentioned_only: false
+      max_concepts_per_chunk: 10  # Dense interdisciplinary content
+      min_explanation_words: 15
+      extract_abbreviations: true  # LIWC, POS, NER, etc.
+
+    examples:
+      - term: "Linguistic Inquiry and Word Count"
+        definition: "A text analysis tool that counts words in psychologically meaningful categories."
+        category: "tool"
+        passage: "LIWC analyzes text by counting words in categories like emotion, cognition, and social processes..."
+
+      - term: "Function Word"
+        definition: "Grammatical words that express relationships between content words, such as pronouns, prepositions, and articles."
+        category: "linguistic_feature"
+        passage: "Function words like pronouns and prepositions reveal cognitive processes and may indicate deception..."
+
+      - term: "Cognitive Load Theory"
+        definition: "A framework explaining how working memory limitations affect mental processes including language production."
+        category: "theory"
+        passage: "Cognitive load theory suggests that lying requires more mental effort than truth-telling..."
+
+      - term: "Truth Bias"
+        definition: "The tendency for people to judge messages as truthful rather than deceptive."
+        category: "bias"
+        passage: "Truth bias leads people to default to believing others are telling the truth..."
+
+      - term: "Zipf's Law"
+        definition: "A statistical law stating that word frequency is inversely proportional to its rank in a frequency table."
+        category: "principle"
+        passage: "Zipf's law describes the power-law distribution of word frequencies in natural language..."
+
+      - term: "Reality Monitoring"
+        definition: "A cognitive process for distinguishing memories of real experiences from imagined events."
+        category: "cognitive_process"
+        passage: "Reality monitoring involves evaluating source characteristics to determine if a memory is real or imagined..."
+
+  # --------------------------------------------------------------------------
+  # COMPUTER SCIENCE & AI
+  # --------------------------------------------------------------------------
+  computer_science:
+    name: "Computer Science & AI"
+    description: "Optimized for CS, ML, AI, software engineering"
+
+    categories:
+      core: [theory, method, principle, metric, tool]
+      domain_specific: [algorithm, data_structure, design_pattern, architecture, paradigm, complexity_class]
+
+    extraction_params:
+      require_definition: false  # Extract known terms even if not defined in THIS paper
+      require_explanation: false
+      extract_mentioned_only: true  # Technical terms are valid even if just used
+      max_concepts_per_chunk: 12  # Dense technical content
+      min_explanation_words: 10
+      extract_abbreviations: true  # CNN, RNN, GAN, etc.
+      extract_acronyms: true
+
+    examples:
+      - term: "Depth-First Search"
+        definition: "A graph traversal algorithm that explores as far as possible along each branch before backtracking."
+        category: "algorithm"
+        passage: "DFS explores as far as possible along each branch before backtracking..."
+
+      - term: "Convolutional Neural Network"
+        definition: "A deep learning architecture designed for processing grid-like data such as images."
+        category: "architecture"
+        passage: "CNNs apply convolutional layers to automatically learn spatial hierarchies of features..."
+
+      - term: "Big O Notation"
+        definition: "Mathematical notation describing the limiting behavior of a function when the argument tends towards infinity."
+        category: "metric"
+        passage: "Big O notation characterizes algorithm complexity in terms of input size..."
+
+  # --------------------------------------------------------------------------
+  # MEDICINE & HEALTH SCIENCES
+  # --------------------------------------------------------------------------
+  medicine:
+    name: "Medicine & Health Sciences"
+    description: "Optimized for medical literature, clinical research"
+
+    categories:
+      core: [theory, method, principle, metric, tool]
+      domain_specific: [disease, treatment, symptom, diagnostic_test, biomarker, pathway, mechanism]
+
+    extraction_params:
+      require_definition: false  # Extract known medical concepts used in context
+      require_explanation: true  # Ensure quality, not just mentions
+      extract_mentioned_only: false
+      max_concepts_per_chunk: 10
+      min_explanation_words: 15
+      extract_abbreviations: true  # MDD, SSRI, ACE, etc.
+      extract_dose_protocols: false  # Skip specific dosages unless asked
+
+    examples:
+      - term: "Major Depressive Disorder"
+        definition: "A mood disorder characterized by persistent sadness and loss of interest in activities."
+        category: "disease"
+        passage: "MDD is characterized by persistent sadness, loss of interest, and impaired functioning..."
+
+      - term: "Selective Serotonin Reuptake Inhibitor"
+        definition: "A class of antidepressant medications that increase serotonin levels in the brain."
+        category: "treatment"
+        passage: "SSRIs work by blocking the reabsorption of serotonin in the brain..."
+
+      - term: "Biomarker"
+        definition: "A measurable indicator of biological state or condition."
+        category: "biomarker"
+        passage: "Biomarkers serve as objective indicators of disease state or therapeutic response..."
+
+  # --------------------------------------------------------------------------
+  # MATHEMATICS
+  # --------------------------------------------------------------------------
+  mathematics:
+    name: "Mathematics"
+    description: "Optimized for pure and applied mathematics"
+
+    categories:
+      core: [theory, method, principle, tool]
+      domain_specific: [theorem, proof, lemma, conjecture, axiom, definition, property, structure]
+
+    extraction_params:
+      require_definition: true
+      require_explanation: true
+      extract_mentioned_only: false
+      max_concepts_per_chunk: 8
+      min_explanation_words: 10
+      extract_formal_definitions: true
+
+    examples:
+      - term: "Fundamental Theorem of Calculus"
+        definition: "A theorem that links the concept of differentiation and integration, showing they are inverse operations."
+        category: "theorem"
+        passage: "The fundamental theorem establishes the relationship between differentiation and integration..."
+
+      - term: "Cauchy Sequence"
+        definition: "A sequence whose elements become arbitrarily close to each other as the sequence progresses."
+        category: "definition"
+        passage: "A Cauchy sequence is one in which elements become arbitrarily close for sufficiently large indices..."
+
+  # --------------------------------------------------------------------------
+  # LEGAL / LAW
+  # --------------------------------------------------------------------------
+  legal:
+    name: "Legal Studies"
+    description: "Optimized for legal texts, case law, statutes"
+
+    categories:
+      core: [theory, method, principle]
+      domain_specific: [statute, precedent, doctrine, standard, test, element, defense, remedy]
+
+    extraction_params:
+      require_definition: false  # Extract legal concepts applied in context
+      require_explanation: true  # Ensure quality, not just mentions
+      extract_mentioned_only: false
+      max_concepts_per_chunk: 7
+      min_explanation_words: 20  # Legal definitions tend to be precise and longer
+      extract_citations: false  # Skip case citations unless asked
+
+    examples:
+      - term: "Reasonable Person Standard"
+        definition: "A legal standard requiring a person to exercise the degree of care that a reasonably prudent person would in similar circumstances."
+        category: "standard"
+        passage: "The reasonable person standard asks what a prudent person would do in similar circumstances..."
+
+  # --------------------------------------------------------------------------
+  # ENGINEERING
+  # --------------------------------------------------------------------------
+  engineering:
+    name: "Engineering"
+    description: "Optimized for engineering disciplines"
+
+    categories:
+      core: [theory, method, principle, metric, tool]
+      domain_specific: [system, architecture, component, protocol, specification, constraint, requirement]
+
+    extraction_params:
+      require_definition: false  # Engineering terms are often used without redefinition
+      require_explanation: true
+      extract_mentioned_only: true
+      max_concepts_per_chunk: 12
+      min_explanation_words: 10
+      extract_specifications: true
+
+    examples:
+      - term: "Finite Element Method"
+        definition: "A numerical technique for finding approximate solutions to boundary value problems for partial differential equations."
+        category: "method"
+        passage: "FEM divides a large system into smaller, simpler parts called finite elements..."
+
+# ==============================================================================
+# DOMAIN ALIASES (for convenience)
+# ==============================================================================
+
+aliases:
+  psych: psychology
+  psycholing: psycholinguistics
+  deception: psycholinguistics
+  linguistics: psycholinguistics
+  cs: computer_science
+  ai: computer_science
+  ml: computer_science
+  med: medicine
+  clinical: medicine
+  math: mathematics
+  law: legal
+  eng: engineering
+
+# ==============================================================================
+# DEFAULT DOMAIN
+# ==============================================================================
+
+default_domain: psychology  # For backward compatibility with existing pipeline

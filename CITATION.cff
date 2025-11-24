@@ -1,0 +1,17 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+  - family-names: IRI
+    given-names: ""
+title: "Knowledge Extraction Pipeline"
+version: 2.2.0
+date-released: 2025-11-23
+url: "https://github.com/YOUR_USERNAME/knowledge-extraction-pipeline"
+license: MIT
+keywords:
+  - knowledge extraction
+  - academic papers
+  - knowledge graphs
+  - natural language processing
+  - Claude MCP
+  - information extraction
