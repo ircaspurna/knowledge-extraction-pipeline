@@ -176,7 +176,7 @@ If you use this pipeline in your research, please cite:
 
 ```bibtex
 @software{knowledge_extraction_pipeline,
-  author = {IRI},
+  author = {Spurna, Irena},
   title = {Knowledge Extraction Pipeline: MCP-Based Academic Knowledge Graph Construction},
   year = {2025},
   url = {https://github.com/ircaspurna/knowledge-extraction-pipeline},

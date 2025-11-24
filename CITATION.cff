@@ -1,12 +1,12 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
 authors:
-  - family-names: IRI
-    given-names: ""
+  - family-names: Spurna
+    given-names: Irena
 title: "Knowledge Extraction Pipeline"
 version: 2.2.0
 date-released: 2025-11-23
-url: "https://github.com/YOUR_USERNAME/knowledge-extraction-pipeline"
+url: "https://github.com/ircaspurna/knowledge-extraction-pipeline"
 license: MIT
 keywords:
   - knowledge extraction
