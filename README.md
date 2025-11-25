@@ -41,9 +41,10 @@ python scripts/process_pdf.py paper.pdf --output ./output/
 
 # The script will:
 # 1. Extract text and create semantic chunks
-# 2. Generate extraction prompts for Claude MCP
-# 3. Parse extraction responses (requires manual Claude step)
-# 4. Resolve entities and build knowledge graph
+# 2. Generate extraction prompts → saves to extraction_batch.json
+# 3. YOU: Ask Claude Code to process extraction_batch.json (see below)
+# 4. Parse Claude's responses → saves to entities.json
+# 5. Resolve entities and build knowledge graph
 
 # Search across processed documents
 python scripts/search.py ./output/chroma_db "cognitive load"
@@ -109,10 +110,35 @@ Input PDF
 ## 💡 Key Innovation: MCP Integration
 
 This pipeline uses **Model Context Protocol (MCP)** for concept extraction, providing:
-- **Lower costs** compared to direct API calls
+- **Lower costs** compared to direct API calls (40-60% savings)
 - **Better quality** through structured prompts
 - **Full control** over extraction workflow
-- **Offline processing** capability
+- **Interactive review** of extractions before finalizing
+
+### How MCP Works (The "Manual Claude Step")
+
+The pipeline generates prompts that you process through Claude Code:
+
+```bash
+# 1. Generate extraction prompts (automated)
+python scripts/process_pdf.py paper.pdf --output ./output/
+# Creates: extraction_batch.json with 50-100 prompts
+
+# 2. Process with Claude Code (interactive)
+# In Claude Code chat, say:
+# "Process the extraction prompts in ./output/extraction_batch.json
+#  and save responses to ./output/extraction_responses.json"
+
+# 3. Parse responses (automated)
+python scripts/parse_responses.py ./output/extraction_responses.json
+# Creates: entities.json with extracted concepts
+```
+
+**Why this approach?**
+- ✅ You review extractions as they happen
+- ✅ Costs appear in Claude Code usage (transparent billing)
+- ✅ Can pause/resume long extractions
+- ✅ Iteratively refine prompts if quality is low
 
 ## 🛠️ Development
 
