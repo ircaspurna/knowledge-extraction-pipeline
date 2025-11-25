@@ -15,6 +15,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from ..utils.path_utils import validate_file_path, validate_directory_path
+
 # Set up logging
 logger = logging.getLogger(__name__)
 
@@ -671,9 +673,17 @@ def main() -> int:
     if args.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
 
-    # Read input
-    input_path = Path(args.input)
-    text = input_path.read_text(encoding='utf-8')
+    # Validate and read input (security check)
+    try:
+        input_path = validate_file_path(
+            args.input,
+            allowed_extensions=['.txt', '.md', '.json'],
+            must_exist=True
+        )
+        text = input_path.read_text(encoding='utf-8')
+    except (ValueError, FileNotFoundError) as e:
+        print(f"Error: {e}")
+        return 1
 
     # Create chunker
     chunker = SemanticChunker(
@@ -695,14 +705,21 @@ def main() -> int:
 
     # Save output
     if args.output:
-        output_path = Path(args.output)
-        output_data = {
-            'source_file': input_path.name,
-            'num_chunks': len(chunks),
-            'chunks': [c.to_dict() for c in chunks]
-        }
-        output_path.write_text(json.dumps(output_data, indent=2), encoding='utf-8')
-        print(f"\n✓ Saved {len(chunks)} chunks to: {output_path}")
+        try:
+            output_path = Path(args.output)
+            output_dir = validate_directory_path(output_path.parent, create=True)
+            output_path = output_dir / output_path.name
+
+            output_data = {
+                'source_file': input_path.name,
+                'num_chunks': len(chunks),
+                'chunks': [c.to_dict() for c in chunks]
+            }
+            output_path.write_text(json.dumps(output_data, indent=2), encoding='utf-8')
+            print(f"\n✓ Saved {len(chunks)} chunks to: {output_path}")
+        except (ValueError, OSError) as e:
+            print(f"Error saving output: {e}")
+            return 1
     else:
         # Print sample chunks
         for i, chunk in enumerate(chunks[:5], 1):

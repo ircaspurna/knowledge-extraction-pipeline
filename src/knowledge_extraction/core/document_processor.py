@@ -19,6 +19,8 @@ import logging
 from pathlib import Path
 from typing import Any
 
+from ..utils.path_utils import validate_file_path, validate_directory_path
+
 # Set up logging
 logger = logging.getLogger(__name__)
 
@@ -512,10 +514,15 @@ class DocumentProcessor:
         - EPUB (.epub) - E-books with chapter tracking
         - Text (.txt, .md) - Plain text
         """
-        file_path = Path(file_path)
-
-        if not file_path.exists():
-            logger.error(f"File not found: {file_path}")
+        # Validate and sanitize input path (security check)
+        try:
+            file_path = validate_file_path(
+                file_path,
+                allowed_extensions=['.pdf', '.epub', '.txt', '.md'],
+                must_exist=True
+            )
+        except (ValueError, FileNotFoundError) as e:
+            logger.error(f"Invalid file path: {e}")
             return None
 
         suffix = file_path.suffix.lower()
@@ -533,8 +540,14 @@ class DocumentProcessor:
 
     def save_document(self, document: dict[str, Any], output_path: Path) -> None:
         """Save processed document to JSON"""
-        output_path = Path(output_path)
-        output_path.parent.mkdir(parents=True, exist_ok=True)
+        # Validate output directory (security check)
+        try:
+            output_path = Path(output_path)
+            output_dir = validate_directory_path(output_path.parent, create=True)
+            output_path = output_dir / output_path.name
+        except (ValueError, OSError) as e:
+            logger.error(f"Invalid output path: {e}")
+            raise
 
         # Convert page_mapping keys to strings for JSON
         if 'page_mapping' in document:

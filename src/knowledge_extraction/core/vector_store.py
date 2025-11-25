@@ -14,6 +14,9 @@ import logging
 from pathlib import Path
 from typing import Any
 
+from ..utils.path_utils import validate_directory_path
+from ..utils.retry import retry, DATABASE_RETRY_CONFIG
+
 # Set up logging
 logger = logging.getLogger(__name__)
 
@@ -39,7 +42,7 @@ class VectorStore:
     ) -> None:
         """
         Initialize vector store.
-        
+
         Args:
             db_path: Path to ChromaDB directory
             collection_name: Name of collection
@@ -47,8 +50,11 @@ class VectorStore:
         if not chromadb:
             raise ImportError("chromadb not installed")
 
-        self.db_path = Path(db_path)
-        self.db_path.mkdir(parents=True, exist_ok=True)
+        # Validate and sanitize database path (security check)
+        try:
+            self.db_path = validate_directory_path(db_path, create=True)
+        except (ValueError, OSError) as e:
+            raise ValueError(f"Invalid database path: {e}")
 
         # Initialize ChromaDB client
         self.client = chromadb.PersistentClient(
@@ -69,6 +75,12 @@ class VectorStore:
             'queries_performed': 0
         }
 
+    @retry(
+        max_retries=DATABASE_RETRY_CONFIG.max_retries,
+        base_delay=DATABASE_RETRY_CONFIG.base_delay,
+        max_delay=DATABASE_RETRY_CONFIG.max_delay,
+        retryable_exceptions=DATABASE_RETRY_CONFIG.retryable_exceptions
+    )
     def index_chunks(self, chunks: list[dict[str, Any]]) -> int:
         """
         Index chunks into vector store.
@@ -78,6 +90,9 @@ class VectorStore:
 
         Returns:
             Number of chunks indexed
+
+        Note:
+            Automatically retries on transient database errors with exponential backoff.
         """
         # Validate inputs
         if not isinstance(chunks, list):
@@ -134,6 +149,12 @@ class VectorStore:
         logger.info(f"Indexed {len(chunks)} chunks into vector store")
         return len(chunks)
 
+    @retry(
+        max_retries=DATABASE_RETRY_CONFIG.max_retries,
+        base_delay=DATABASE_RETRY_CONFIG.base_delay,
+        max_delay=DATABASE_RETRY_CONFIG.max_delay,
+        retryable_exceptions=DATABASE_RETRY_CONFIG.retryable_exceptions
+    )
     def search(
         self,
         query: str,
@@ -150,6 +171,9 @@ class VectorStore:
 
         Returns:
             List of matching chunks with similarity scores
+
+        Note:
+            Automatically retries on transient database errors with exponential backoff.
         """
         # Validate inputs
         if not query or not query.strip():
@@ -190,15 +214,24 @@ class VectorStore:
 
         return chunks
 
+    @retry(
+        max_retries=DATABASE_RETRY_CONFIG.max_retries,
+        base_delay=DATABASE_RETRY_CONFIG.base_delay,
+        max_delay=DATABASE_RETRY_CONFIG.max_delay,
+        retryable_exceptions=DATABASE_RETRY_CONFIG.retryable_exceptions
+    )
     def get_chunk(self, chunk_id: str) -> dict[str, Any] | None:
         """
         Retrieve specific chunk by ID.
-        
+
         Args:
             chunk_id: Chunk identifier
-        
+
         Returns:
             Chunk dict or None if not found
+
+        Note:
+            Automatically retries on transient database errors with exponential backoff.
         """
         try:
             results = self.collection.get(
