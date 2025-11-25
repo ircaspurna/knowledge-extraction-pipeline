@@ -353,7 +353,8 @@ class SemanticChunker:
             )
             labels = clustering.fit_predict(embeddings)
 
-            return labels.tolist()
+            # Cast to list[int] for type safety
+            return [int(label) for label in labels]
         except Exception as e:
             logger.warning(f"Topic clustering failed: {e}")
             return [-1] * len(texts)

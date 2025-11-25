@@ -40,7 +40,7 @@ jobs:
       - name: Type checking with mypy
         run: |
           echo "=== Running mypy --strict on core modules ==="
-          mypy --strict \
+          mypy --strict --no-site-packages \
             src/knowledge_extraction/core/ \
             src/knowledge_extraction/utils/ \
             || { echo "❌ mypy failed"; exit 1; }
