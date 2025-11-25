@@ -6,13 +6,13 @@ These tests use real academic papers to verify the pipeline works
 with actual documents, not just mocked data.
 """
 
-import pytest
 from pathlib import Path
+
+import pytest
 
 from knowledge_extraction.core.document_processor import DocumentProcessor
 from knowledge_extraction.core.semantic_chunker import SemanticChunker
 from knowledge_extraction.core.vector_store import VectorStore
-
 
 # Fixture paths
 FIXTURES_DIR = Path(__file__).parent / "fixtures"

@@ -4,12 +4,12 @@ Batch Workflow Example
 Process multiple PDFs and build a unified knowledge graph.
 """
 
-from pathlib import Path
-from knowledge_extraction.core import DocumentProcessor, SemanticChunker, VectorStore, GraphBuilder
-from knowledge_extraction.extraction import ConceptExtractorMCP, EntityResolverMCP
-from knowledge_extraction.extraction.concept_extractor import create_batch_extraction_file
 import json
 import logging
+from pathlib import Path
+
+from knowledge_extraction.core import DocumentProcessor, SemanticChunker, VectorStore
+from knowledge_extraction.extraction.concept_extractor import create_batch_extraction_file
 
 # Configure logging
 logging.basicConfig(
@@ -120,7 +120,7 @@ def process_batch(
 
     # Summary
     logger.info("\n" + "=" * 60)
-    logger.info(f"Batch Processing Complete!")
+    logger.info("Batch Processing Complete!")
     logger.info(f"  Successful: {successful}")
     logger.info(f"  Skipped: {skipped}")
     logger.info(f"  Failed: {len(pdf_files) - successful - skipped}")

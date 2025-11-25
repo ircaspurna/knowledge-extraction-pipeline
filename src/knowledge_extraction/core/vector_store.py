@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from ..utils.path_utils import validate_directory_path
-from ..utils.retry import retry, DATABASE_RETRY_CONFIG
+from ..utils.retry import DATABASE_RETRY_CONFIG, retry
 
 # Set up logging
 logger = logging.getLogger(__name__)

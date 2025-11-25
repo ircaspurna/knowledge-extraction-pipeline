@@ -8,8 +8,9 @@ due to transient errors (network issues, rate limits, temporary failures).
 
 import logging
 import time
+from collections.abc import Callable
 from functools import wraps
-from typing import Any, Callable, Type, TypeVar, cast
+from typing import Any, TypeVar, cast
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -75,7 +76,7 @@ def retry_with_backoff(
     max_retries: int = 3,
     base_delay: float = 1.0,
     max_delay: float = 60.0,
-    retryable_exceptions: tuple[Type[Exception], ...] = DEFAULT_RETRYABLE_EXCEPTIONS,
+    retryable_exceptions: tuple[type[Exception], ...] = DEFAULT_RETRYABLE_EXCEPTIONS,
     on_retry: Callable[[Exception, int, float], None] | None = None,
     *args: Any,
     **kwargs: Any
@@ -156,7 +157,7 @@ def retry(
     max_retries: int = 3,
     base_delay: float = 1.0,
     max_delay: float = 60.0,
-    retryable_exceptions: tuple[Type[Exception], ...] = DEFAULT_RETRYABLE_EXCEPTIONS,
+    retryable_exceptions: tuple[type[Exception], ...] = DEFAULT_RETRYABLE_EXCEPTIONS,
     on_retry: Callable[[Exception, int, float], None] | None = None
 ) -> Callable[[F], F]:
     """
@@ -217,7 +218,7 @@ class RetryConfig:
         max_retries: int = 3,
         base_delay: float = 1.0,
         max_delay: float = 60.0,
-        retryable_exceptions: tuple[Type[Exception], ...] = DEFAULT_RETRYABLE_EXCEPTIONS
+        retryable_exceptions: tuple[type[Exception], ...] = DEFAULT_RETRYABLE_EXCEPTIONS
     ):
         """
         Initialize retry configuration.

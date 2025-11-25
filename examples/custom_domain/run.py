@@ -4,12 +4,13 @@ Custom Domain Example
 Shows how to use domain-specific extraction configuration.
 """
 
+import json
+import logging
 from pathlib import Path
+
 from knowledge_extraction.core import DocumentProcessor, SemanticChunker
 from knowledge_extraction.extraction import ConceptExtractorMCP
 from knowledge_extraction.extraction.concept_extractor import create_batch_extraction_file
-import json
-import logging
 
 # Configure logging
 logging.basicConfig(

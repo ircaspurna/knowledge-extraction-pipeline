@@ -5,17 +5,18 @@ Tests for retry utilities
 Ensures retry logic works correctly with exponential backoff.
 """
 
-import pytest
 import time
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
+
+import pytest
 
 from knowledge_extraction.utils.retry import (
-    exponential_backoff,
-    retry_with_backoff,
-    retry,
-    RetryConfig,
-    DEFAULT_RETRY_CONFIG,
     DATABASE_RETRY_CONFIG,
+    DEFAULT_RETRY_CONFIG,
+    RetryConfig,
+    exponential_backoff,
+    retry,
+    retry_with_backoff,
 )
 
 

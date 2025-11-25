@@ -19,7 +19,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from ..utils.path_utils import validate_file_path, validate_directory_path
+from ..utils.path_utils import validate_directory_path, validate_file_path
 
 # Set up logging
 logger = logging.getLogger(__name__)

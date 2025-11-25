@@ -5,15 +5,14 @@ Tests for path validation and security
 Ensures path traversal attacks are prevented.
 """
 
+
 import pytest
-from pathlib import Path
-import tempfile
 
 from knowledge_extraction.utils.path_utils import (
-    validate_file_path,
-    validate_directory_path,
+    PathSecurityError,
     sanitize_filename,
-    PathSecurityError
+    validate_directory_path,
+    validate_file_path,
 )
 
 

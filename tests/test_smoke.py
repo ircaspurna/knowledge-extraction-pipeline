@@ -63,7 +63,12 @@ def test_package_structure() -> None:
 def test_core_modules_importable() -> None:
     """Test that core modules can be imported."""
     try:
-        from knowledge_extraction.core import DocumentProcessor, SemanticChunker, VectorStore, GraphBuilder
+        from knowledge_extraction.core import (
+            DocumentProcessor,
+            GraphBuilder,
+            SemanticChunker,
+            VectorStore,
+        )
         assert DocumentProcessor is not None
         assert SemanticChunker is not None
         assert VectorStore is not None

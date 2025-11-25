@@ -1,8 +1,7 @@
 """Integration test for full pipeline."""
 
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
-import pytest
+from unittest.mock import Mock, patch
 
 
 class TestFullPipelineIntegration:
@@ -64,8 +63,8 @@ class TestFullPipelineIntegration:
 
     def test_concept_extraction_to_graph_integration(self) -> None:
         """Test pipeline from concepts to knowledge graph."""
-        from knowledge_extraction.extraction import EntityResolverMCP
         from knowledge_extraction.core import GraphBuilder
+        from knowledge_extraction.extraction import EntityResolverMCP
 
         # Create test concepts
         concepts = [
@@ -191,11 +190,11 @@ class TestEndToEndWorkflow:
         """Test minimal end-to-end workflow."""
         from knowledge_extraction.core import (
             DocumentProcessor,
+            GraphBuilder,
             SemanticChunker,
             VectorStore,
-            GraphBuilder
         )
-        from knowledge_extraction.extraction import ConceptExtractorMCP, EntityResolverMCP
+        from knowledge_extraction.extraction import EntityResolverMCP
 
         # Setup mocks
         mock_page = Mock()

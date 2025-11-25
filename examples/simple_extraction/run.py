@@ -3,7 +3,9 @@ Simple extraction example.
 Processes a single PDF and extracts concepts.
 """
 from pathlib import Path
+
 from knowledge_extraction.core import DocumentProcessor, SemanticChunker
+
 
 def main():
     # Setup

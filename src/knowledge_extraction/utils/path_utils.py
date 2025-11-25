@@ -8,7 +8,6 @@ Prevents path traversal attacks and ensures safe file operations.
 import os
 import re
 from pathlib import Path
-from typing import Optional
 
 
 class PathSecurityError(Exception):
@@ -18,9 +17,9 @@ class PathSecurityError(Exception):
 
 def validate_file_path(
     file_path: str | Path,
-    allowed_extensions: Optional[list[str]] = None,
+    allowed_extensions: list[str] | None = None,
     must_exist: bool = False,
-    base_dir: Optional[Path] = None
+    base_dir: Path | None = None
 ) -> Path:
     """
     Validate and sanitize a file path for safe operations.
@@ -132,7 +131,7 @@ def validate_file_path(
 def validate_directory_path(
     dir_path: str | Path,
     create: bool = False,
-    base_dir: Optional[Path] = None
+    base_dir: Path | None = None
 ) -> Path:
     """
     Validate and sanitize a directory path for safe operations.
