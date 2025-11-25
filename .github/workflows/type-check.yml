@@ -30,55 +30,21 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install mypy types-PyYAML types-requests
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        pip install mypy ruff pytest types-PyYAML
+        pip install -e .
 
-    - name: Run mypy on Pipeline scripts
+    - name: Run mypy on core modules
       run: |
-        echo "🔍 Type checking Pipeline scripts..."
-        mypy --strict \
-          complete_pipeline.py \
-          batch_process.py \
-          build_topic_graph.py \
-          semantic_search.py \
-          import_to_neo4j.py \
-          process_relationships_batch.py \
-          concept_extractor_mcp.py \
-          entity_resolver_mcp.py \
-          document_processor.py \
-          semantic_chunker.py \
-          vector_store.py \
-          graph_builder.py \
-          create_offline_viz.py \
-          create_optimized_viz.py \
-          create_simple_working_viz.py \
-          overnight_batch_processor.py \
-          fast_batch_resolution.py \
-          build_similarity_graph.py \
-          batch_entity_resolution.py \
-          consolidated_extraction_prompt.py \
-          parse_dissertation_responses.py \
-          regenerate_dissertation_batches.py \
-          run_dissertation_extraction_api.py \
-          mcp_server.py \
-          relationship_extractor_mcp.py
-
-    - name: Run mypy on Enhancement scripts
-      run: |
-        echo "🔍 Type checking Enhancement scripts..."
-        cd "Knowledge Base Enhancements"
-        mypy --strict \
-          graph_visualizer.py \
-          ultra_fast_graph_viz.py \
-          fast_graph_viz.py \
-          batch_processor_complete.py \
-          demo_complete_workflow.py \
-          incremental_graph_updater.py \
-          relationship_types_extended.py
+        echo "🔍 Type checking core modules..."
+        mypy --strict --no-site-packages \
+          src/knowledge_extraction/core/ \
+          src/knowledge_extraction/utils/ \
+          || { echo "❌ mypy failed"; exit 1; }
+        echo "✅ Type checking passed"
 
     - name: Summary
       if: success()
       run: |
-        echo "✅ All 32 scripts pass mypy --strict!"
-        echo "   - 25 Pipeline scripts"
-        echo "   - 7 Enhancement scripts"
+        echo "✅ All core modules pass mypy --strict!"
+        echo "   - src/knowledge_extraction/core/"
+        echo "   - src/knowledge_extraction/utils/"
