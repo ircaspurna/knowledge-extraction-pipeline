@@ -4,6 +4,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![Tests](https://github.com/ircaspurna/knowledge-extraction-pipeline/actions/workflows/quality.yml/badge.svg)](https://github.com/ircaspurna/knowledge-extraction-pipeline/actions)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 **A complete, production-ready system for extracting structured knowledge from academic PDFs and building professional knowledge graphs.**
