@@ -71,11 +71,11 @@ domains:
         passage: "Cognitive load theory posits that working memory has limited capacity..."
 
   # --------------------------------------------------------------------------
-  # PSYCHOLINGUISTICS & DECEPTION DETECTION
+  # PSYCHOLINGUISTICS & LINGUISTIC ANALYSIS
   # --------------------------------------------------------------------------
   psycholinguistics:
-    name: "Psycholinguistics & Deception Detection"
-    description: "Optimized for linguistic analysis, deception detection, psycholinguistics, computational linguistics"
+    name: "Psycholinguistics & Linguistic Analysis"
+    description: "Optimized for linguistic analysis, psycholinguistics, discourse analysis, computational linguistics"
 
     categories:
       core: [theory, method, phenomenon, principle, metric, tool]
@@ -105,17 +105,17 @@ domains:
       - term: "Function Word"
         definition: "Grammatical words that express relationships between content words, such as pronouns, prepositions, and articles."
         category: "linguistic_feature"
-        passage: "Function words like pronouns and prepositions reveal cognitive processes and may indicate deception..."
+        passage: "Function words like pronouns and prepositions reveal cognitive processes and linguistic patterns..."
 
       - term: "Cognitive Load Theory"
         definition: "A framework explaining how working memory limitations affect mental processes including language production."
         category: "theory"
-        passage: "Cognitive load theory suggests that lying requires more mental effort than truth-telling..."
+        passage: "Cognitive load theory suggests that complex cognitive tasks require more mental effort and affect language production..."
 
-      - term: "Truth Bias"
-        definition: "The tendency for people to judge messages as truthful rather than deceptive."
+      - term: "Confirmation Bias"
+        definition: "The tendency for people to search for, interpret, and recall information that confirms their preexisting beliefs."
         category: "bias"
-        passage: "Truth bias leads people to default to believing others are telling the truth..."
+        passage: "Confirmation bias leads people to preferentially attend to information that supports their existing hypotheses..."
 
       - term: "Zipf's Law"
         definition: "A statistical law stating that word frequency is inversely proportional to its rank in a frequency table."
@@ -286,8 +286,8 @@ domains:
 aliases:
   psych: psychology
   psycholing: psycholinguistics
-  deception: psycholinguistics
   linguistics: psycholinguistics
+  discourse: psycholinguistics
   cs: computer_science
   ai: computer_science
   ml: computer_science

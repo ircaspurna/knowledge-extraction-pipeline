@@ -7,7 +7,7 @@ resolves entities, builds graph, and visualizes.
 
 Usage:
     python3 build_topic_graph.py /path/to/topic_directory/
-    python3 build_topic_graph.py /path/to/topic_directory/ --title "Deception Detection"
+    python3 build_topic_graph.py /path/to/topic_directory/ --title "Research Topic"
 """
 
 import json
@@ -204,11 +204,11 @@ def main() -> int:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Build graph for deception detection papers
-  python3 build_topic_graph.py /Users/IRI/Knowledge\\ Base/PIPELINE_OUTPUT/deception_detection/
+  # Build graph for research papers
+  python3 build_topic_graph.py /Users/IRI/Knowledge\\ Base/PIPELINE_OUTPUT/research_topic/
 
   # With custom title
-  python3 build_topic_graph.py deception_detection/ --title "Deception Detection Literature"
+  python3 build_topic_graph.py research_topic/ --title "Research Literature Review"
 
   # Higher threshold for cross-domain topics
   python3 build_topic_graph.py mixed_topics/ --threshold 0.92

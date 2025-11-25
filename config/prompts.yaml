@@ -64,17 +64,17 @@ concept_extraction:
 
 dissertation_context_extraction:
   system: |
-    You are an expert research assistant helping with dissertation research on
-    deception detection and "the lying code". Your task is to extract contextual
-    information that's useful for understanding research approaches, findings,
-    problems, and evaluations - even if not fully explained.
+    You are an expert research assistant helping with dissertation research.
+    Your task is to extract contextual information that's useful for understanding
+    research approaches, findings, problems, and evaluations - even if not fully
+    explained.
 
     Priority extraction targets:
     - Research methods and approaches
     - Key findings and results
     - Problems, limitations, and critiques
     - Evaluative statements about theories/approaches
-    - Context relevant to understanding deception detection research
+    - Context relevant to understanding the research domain
 
   user_template: |
     Extract research context from the following passage. For each piece of information:
@@ -83,7 +83,7 @@ dissertation_context_extraction:
     2. **Definition**: What it is, what they found, or what the issue is
     3. **Category**: method | finding | problem | critique | evaluation | concept | tool
     4. **Importance**: critical | high | medium | low
-    5. **Justification**: Why relevant to deception detection research
+    5. **Justification**: Why relevant to the research
     6. **Quote**: Supporting quote from text (max 100 words)
 
     **PERMISSIVE RULES** (extract more contextual information):
@@ -117,7 +117,7 @@ dissertation_context_extraction:
       "definition": "Method for coding statements based on checkable details that can be verified.",
       "category": "method",
       "importance": "medium",
-      "justification": "Core deception detection method used in the study.",
+      "justification": "Core analytical method used in the study.",
       "quote": "We used the verifiability approach to code statements for checkable details."
     }
 
@@ -143,7 +143,7 @@ dissertation_context_extraction:
       "definition": "CBCA relies on subjective judgment, causing inconsistent inter-rater reliability.",
       "category": "problem",
       "importance": "high",
-      "justification": "Fundamental limitation affecting reliability of CBCA as deception detection method.",
+      "justification": "Fundamental limitation affecting reliability of CBCA as an analytical method.",
       "quote": "A major limitation of CBCA is its reliance on subjective judgment, leading to inconsistent results across raters."
     }
 
@@ -156,7 +156,7 @@ dissertation_context_extraction:
       "definition": "Linguistic complexity measures did not reliably distinguish truth from lies in meta-analytic evidence.",
       "category": "evaluation",
       "importance": "high",
-      "justification": "Important negative finding about effectiveness of linguistic approach to deception detection.",
+      "justification": "Important negative finding about effectiveness of linguistic approach to the research question.",
       "quote": "Despite initial promise, linguistic complexity measures failed to reliably distinguish truth from lies in our meta-analysis."
     }
 
@@ -169,13 +169,13 @@ dissertation_context_extraction:
       "definition": "Framework for analyzing statements based on perceptual details, contextual information, and cognitive operations.",
       "category": "tool",
       "importance": "medium",
-      "justification": "Established analytical framework used in deception detection research.",
+      "justification": "Established analytical framework used in the research.",
       "quote": "We applied Reality Monitoring criteria including perceptual details, contextual information, and cognitive operations."
     }
 
     **REASONING PROCESS**:
     1. Does this describe a METHOD, FINDING, PROBLEM, or EVALUATION?
-    2. Is it relevant to understanding deception detection research?
+    2. Is it relevant to understanding the research domain?
     3. Would a dissertation reader benefit from knowing this context?
     4. Can I extract a supporting quote?
     5. Even if brief, does it provide useful research context?

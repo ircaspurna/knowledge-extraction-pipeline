@@ -164,7 +164,7 @@ def interactive_search(base_dir: Path) -> None:
     databases = find_all_vector_dbs(base_dir)
 
     logger.info("="*70)
-    logger.info("SEMANTIC SEARCH - Deception Detection Research Library")
+    logger.info("SEMANTIC SEARCH - Knowledge Base")
     logger.info("="*70)
     logger.info(f"\n📚 Loaded {len(databases)} documents")
     logger.info("💡 Type your search query or 'quit' to exit\n")
@@ -246,7 +246,7 @@ Examples:
   python3 semantic_search.py --base-dir PIPELINE_OUTPUT/my_batch/ --query "cognitive load"
 
   # More results per document
-  python3 semantic_search.py --base-dir my_batch/ --query "deception" --top-k 5
+  python3 semantic_search.py --base-dir my_batch/ --query "methodology" --top-k 5
         """
     )
     parser.add_argument(

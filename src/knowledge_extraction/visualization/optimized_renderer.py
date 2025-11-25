@@ -615,7 +615,7 @@ if __name__ == '__main__':
         format='%(levelname)s: %(message)s'
     )
 
-    graph_path = Path("/Users/IRI/Knowledge Base/PIPELINE_OUTPUT/deception_detection_batch/knowledge_graph.json")
-    output_path = Path("/Users/IRI/Knowledge Base/PIPELINE_OUTPUT/deception_detection_batch/knowledge_graph_OPTIMIZED.html")
+    graph_path = Path("/Users/IRI/Knowledge Base/PIPELINE_OUTPUT/research_topic/knowledge_graph.json")
+    output_path = Path("/Users/IRI/Knowledge Base/PIPELINE_OUTPUT/research_topic/knowledge_graph_OPTIMIZED.html")
 
-    create_optimized_viz(graph_path, output_path, "Deception Detection Knowledge Graph - Optimized")
+    create_optimized_viz(graph_path, output_path, "Knowledge Graph - Optimized")

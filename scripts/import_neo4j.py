@@ -224,9 +224,9 @@ LIMIT 15
 
 ## 5. Domain-Specific Queries
 
-### Find deception detection methods
+### Find analytical methods
 MATCH (m:Concept {category: 'method'})
-WHERE toLower(m.term) CONTAINS 'detect' OR toLower(m.definition) CONTAINS 'deception'
+WHERE toLower(m.term) CONTAINS 'analysis' OR toLower(m.definition) CONTAINS 'methodology'
 RETURN m.term, m.importance, m.definition
 LIMIT 20
 
