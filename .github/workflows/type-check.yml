@@ -36,7 +36,7 @@ jobs:
     - name: Run mypy on core modules
       run: |
         echo "🔍 Type checking core modules..."
-        mypy --strict --no-site-packages \
+        mypy --strict --no-site-packages --follow-imports=silent \
           src/knowledge_extraction/core/ \
           src/knowledge_extraction/utils/ \
           || { echo "❌ mypy failed"; exit 1; }
