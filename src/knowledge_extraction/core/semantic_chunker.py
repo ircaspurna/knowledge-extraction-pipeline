@@ -428,7 +428,8 @@ class SemanticChunker:
         # Add final chunk
         if current_chunk_sentences:
             chunk_text = ' '.join(current_chunk_sentences)
-            chunks.append((chunk_text, current_chunk_start))
+            if chunk_text.strip():  # Only add if not empty
+                chunks.append((chunk_text, current_chunk_start))
 
         return chunks
 
