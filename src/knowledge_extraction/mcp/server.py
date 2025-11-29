@@ -38,21 +38,24 @@ except ImportError:
     print("Install with: pip install mcp")
     raise
 
-# Add current directory to path
-sys.path.insert(0, str(Path(__file__).parent))
+# Add module directories to path
+modules_dir = Path(__file__).parent.parent  # Go up to knowledge_extraction/
+sys.path.insert(0, str(modules_dir / 'extraction'))
+sys.path.insert(0, str(modules_dir / 'core'))
+sys.path.insert(0, str(modules_dir / 'mcp'))
 
-# Import our MCP-native extractors (existing, working)
-from concept_extractor_mcp import ConceptExtractorMCP, create_batch_extraction_file
+# Import our extractors
+from concept_extractor import ConceptExtractorMCP, create_batch_extraction_file
+from entity_resolver import EntityResolverMCP
+from relationship_extractor import RelationshipExtractor
 
-# Import other dependencies
+# Import core dependencies
 from document_processor import DocumentProcessor
-from entity_resolver_mcp import EntityResolverMCP
-
-# Import core modules (NEW - production-grade)
-from graph_building_core import process_entities_file, process_topic_directory
-from neo4j_import_core import import_graph_to_neo4j, verify_neo4j_connection
-from relationship_extractor_mcp import RelationshipExtractor
 from semantic_chunker import SemanticChunker
+
+# Import graph and neo4j tools (from local mcp directory)
+from graph_tools import process_entities_file, process_topic_directory
+from neo4j_tools import import_graph_to_neo4j, verify_neo4j_connection
 
 # =========================================================================
 # MCP Server Setup
