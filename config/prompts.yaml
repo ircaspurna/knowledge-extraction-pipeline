@@ -98,79 +98,79 @@ dissertation_context_extraction:
     ✗ Skip author names and affiliations alone
 
     **CATEGORIES EXPANDED**:
-    - **method**: Research method, technique, approach, procedure (e.g., "interview protocol", "linguistic analysis", "LIWC coding")
-    - **finding**: Result, observation, outcome (e.g., "liars showed more pauses", "accuracy was 61%")
-    - **problem**: Issue, limitation, failure, critique (e.g., "low ecological validity", "assumption violated", "method failed to detect")
+    - **method**: Research method, technique, approach, procedure (e.g., "survey design", "statistical analysis", "content coding")
+    - **finding**: Result, observation, outcome (e.g., "significant correlation found", "effect size was d=0.42")
+    - **problem**: Issue, limitation, failure, critique (e.g., "low ecological validity", "assumption violated", "method showed limitations")
     - **critique**: Evaluation of other work, identified weakness (e.g., "prior studies lacked control groups")
     - **evaluation**: Assessment, judgment about effectiveness (e.g., "approach showed promise but...", "method outperformed baseline")
     - **concept**: Theory, phenomenon, principle (traditional concepts)
-    - **tool**: Software, instrument, measure (e.g., "Reality Monitoring framework", "CBCA criteria")
+    - **tool**: Software, instrument, measure (e.g., "statistical software", "validated scale")
 
     **EXAMPLES FOR DISSERTATION CONTEXT**:
 
     Example 1 (Extract METHOD even if brief):
-    Passage: "We used the verifiability approach to code statements for checkable details."
+    Passage: "We used thematic analysis to code interview transcripts for recurring patterns."
 
     ✓ EXTRACT:
     {
-      "term": "Verifiability Approach",
-      "definition": "Method for coding statements based on checkable details that can be verified.",
+      "term": "Thematic Analysis",
+      "definition": "Method for coding qualitative data to identify recurring patterns and themes.",
       "category": "method",
       "importance": "medium",
       "justification": "Core analytical method used in the study.",
-      "quote": "We used the verifiability approach to code statements for checkable details."
+      "quote": "We used thematic analysis to code interview transcripts for recurring patterns."
     }
 
     Example 2 (Extract FINDING):
-    Passage: "Truth-tellers provided significantly more verifiable details (M=12.4) than liars (M=7.2), t(98)=3.45, p<.01."
+    Passage: "Participants in the experimental condition showed significantly higher performance (M=8.4) than controls (M=6.2), t(98)=3.45, p<.01."
 
     ✓ EXTRACT:
     {
-      "term": "Verifiable Details Difference",
-      "definition": "Truth-tellers provided nearly twice as many verifiable details compared to liars (12.4 vs 7.2).",
+      "term": "Experimental Condition Performance Advantage",
+      "definition": "Participants in the experimental condition demonstrated significantly higher performance compared to controls (8.4 vs 6.2).",
       "category": "finding",
       "importance": "high",
-      "justification": "Key empirical result showing discriminative power of verifiable details.",
-      "quote": "Truth-tellers provided significantly more verifiable details (M=12.4) than liars (M=7.2), t(98)=3.45, p<.01."
+      "justification": "Key empirical result showing effectiveness of the experimental manipulation.",
+      "quote": "Participants in the experimental condition showed significantly higher performance (M=8.4) than controls (M=6.2), t(98)=3.45, p<.01."
     }
 
     Example 3 (Extract PROBLEM/CRITIQUE):
-    Passage: "A major limitation of CBCA is its reliance on subjective judgment, leading to inconsistent results across raters."
+    Passage: "A major limitation of the self-report measure is its reliance on subjective judgment, leading to inconsistent results across participants."
 
     ✓ EXTRACT:
     {
-      "term": "CBCA Subjectivity Problem",
-      "definition": "CBCA relies on subjective judgment, causing inconsistent inter-rater reliability.",
+      "term": "Self-Report Measurement Limitation",
+      "definition": "Self-report measures rely on subjective judgment, causing inconsistent inter-participant reliability.",
       "category": "problem",
       "importance": "high",
-      "justification": "Fundamental limitation affecting reliability of CBCA as an analytical method.",
-      "quote": "A major limitation of CBCA is its reliance on subjective judgment, leading to inconsistent results across raters."
+      "justification": "Fundamental limitation affecting reliability of the measurement approach.",
+      "quote": "A major limitation of the self-report measure is its reliance on subjective judgment, leading to inconsistent results across participants."
     }
 
     Example 4 (Extract EVALUATION):
-    Passage: "Despite initial promise, linguistic complexity measures failed to reliably distinguish truth from lies in our meta-analysis."
+    Passage: "Despite initial promise, behavioral measures failed to reliably predict outcomes in our meta-analysis."
 
     ✓ EXTRACT:
     {
-      "term": "Linguistic Complexity Ineffectiveness",
-      "definition": "Linguistic complexity measures did not reliably distinguish truth from lies in meta-analytic evidence.",
+      "term": "Behavioral Measure Prediction Failure",
+      "definition": "Behavioral measures did not reliably predict outcomes in meta-analytic evidence.",
       "category": "evaluation",
       "importance": "high",
-      "justification": "Important negative finding about effectiveness of linguistic approach to the research question.",
-      "quote": "Despite initial promise, linguistic complexity measures failed to reliably distinguish truth from lies in our meta-analysis."
+      "justification": "Important negative finding about effectiveness of behavioral measurement approach.",
+      "quote": "Despite initial promise, behavioral measures failed to reliably predict outcomes in our meta-analysis."
     }
 
     Example 5 (Extract TOOL/FRAMEWORK):
-    Passage: "We applied Reality Monitoring criteria including perceptual details, contextual information, and cognitive operations."
+    Passage: "We applied the Theory of Planned Behavior framework including attitudes, subjective norms, and perceived control."
 
     ✓ EXTRACT:
     {
-      "term": "Reality Monitoring",
-      "definition": "Framework for analyzing statements based on perceptual details, contextual information, and cognitive operations.",
+      "term": "Theory of Planned Behavior",
+      "definition": "Framework for analyzing behavior based on attitudes, subjective norms, and perceived behavioral control.",
       "category": "tool",
       "importance": "medium",
-      "justification": "Established analytical framework used in the research.",
-      "quote": "We applied Reality Monitoring criteria including perceptual details, contextual information, and cognitive operations."
+      "justification": "Established theoretical framework used in the research.",
+      "quote": "We applied the Theory of Planned Behavior framework including attitudes, subjective norms, and perceived control."
     }
 
     **REASONING PROCESS**:
