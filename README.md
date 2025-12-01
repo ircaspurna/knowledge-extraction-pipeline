@@ -17,6 +17,8 @@
 - 📊 **Knowledge Graphs** - NetworkX graphs with Neo4j export
 - 🔍 **Semantic Search** - Vector-based document search with ChromaDB
 - 🎨 **Visualization** - Interactive Cytoscape.js & Neo4j Browser
+- ⚡ **Batch Processing** - Process multiple PDFs in parallel (NEW in v3.0)
+- 📈 **Graph Analytics** - PageRank, centrality, statistics (NEW in v3.0)
 
 ## 🚀 Quick Start
 
@@ -36,25 +38,38 @@ pip install .
 
 ### Process Your First PDF
 
+**NEW in v3.0:** The pipeline is now 100% MCP-native! Use the included MCP server for a conversational workflow.
+
+See [docs/WORKFLOW.md](docs/WORKFLOW.md) for complete step-by-step instructions.
+
+#### Quick Start with MCP Tools
+
 ```bash
-# Complete pipeline: PDF → Chunks → Concepts → Entities → Graph
-python scripts/process_pdf.py paper.pdf --output ./output/
+# 1. Process single PDF
+mcp__knowledge-extraction__process_pdf_document pdf_path="paper.pdf"
+mcp__knowledge-extraction__create_semantic_chunks document_file="document.json"
+mcp__knowledge-extraction__generate_extraction_prompts chunks_file="chunks.json"
 
-# The script will:
-# 1. Extract text and create semantic chunks
-# 2. Generate extraction prompts → saves to extraction_batch.json
-# 3. YOU: Ask Claude Code to process extraction_batch.json (see below)
-# 4. Parse Claude's responses → saves to entities.json
-# 5. Resolve entities and build knowledge graph
+# 2. OR batch process multiple PDFs (NEW!)
+mcp__knowledge-extraction__batch_process_pdfs input_dir="./pdfs/"
 
-# Search across processed documents
-python scripts/search.py ./output/chroma_db "cognitive load"
+# 3. Extract concepts (Claude Code processes prompts automatically)
 
-# Build topic graph from multiple papers
-python scripts/build_graph.py ./output/ --output topic_graph.json
+# 4. Parse responses and build graph
+mcp__knowledge-extraction__parse_extraction_responses responses_file="extraction_responses.json"
+mcp__knowledge-extraction__resolve_entities_automatic concepts_file="concepts.json"
+mcp__knowledge-extraction__build_knowledge_graph entities_file="entities.json"
 
-# Import to Neo4j for advanced visualization (optional)
-python scripts/import_neo4j.py ./output/knowledge_graph.json
+# 5. Visualize (NEW in v3.0!)
+mcp__knowledge-extraction__create_graph_visualization graph_file="knowledge_graph.json"
+# OR import to Neo4j
+mcp__knowledge-extraction__import_graph_to_neo4j graph_file="knowledge_graph.json" neo4j_password="your_password"
+
+# 6. Search across documents (NEW!)
+mcp__knowledge-extraction__search_semantic_documents query="cognitive load" base_dir="./output/"
+
+# 7. Analyze graph structure (NEW!)
+mcp__knowledge-extraction__get_graph_statistics graph_file="knowledge_graph.json"
 ```
 
 ## 📖 Documentation
@@ -207,7 +222,7 @@ If you use this pipeline in your research, please cite:
   title = {Knowledge Extraction Pipeline: MCP-Based Academic Knowledge Graph Construction},
   year = {2025},
   url = {https://github.com/ircaspurna/knowledge-extraction-pipeline},
-  version = {2.2.0}
+  version = {3.0.0}
 }
 ```
 
