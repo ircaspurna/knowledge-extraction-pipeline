@@ -11,7 +11,7 @@ import logging
 import re
 from collections import defaultdict
 from pathlib import Path
-from typing import Any
+from typing import Any, Set, Tuple
 
 import networkx as nx  # type: ignore
 
@@ -65,15 +65,26 @@ def exact_string_resolution(concepts: list[dict[str, Any]]) -> tuple[list[dict[s
         base_concept['evidence_count'] = len(group)
         base_concept['source_papers'] = []
 
-        # Collect unique source files
+        # Collect unique source files AND chunk_ids
         sources = set()
+        evidence_list = []
         for idx, concept in group:
             src = concept.get('source_file', '')
             if src:
                 sources.add(src)
+
+            # Collect chunk_id from each concept
+            if 'chunk_id' in concept:
+                evidence_list.append({
+                    'chunk_id': concept['chunk_id'],
+                    'source_file': concept.get('source_file', ''),
+                    'page': concept.get('page', 0)
+                })
+
             concept_to_entity[idx] = len(entities)
 
         base_concept['source_papers'] = list(sources)
+        base_concept['evidence'] = evidence_list  # Add evidence array with chunk_ids
         entities.append(base_concept)
 
     logger.info(f"Created {len(entities)} entities from exact string matching")
@@ -139,6 +150,88 @@ def known_alias_resolution(entities: list[dict[str, Any]]) -> list[dict[str, Any
 
     logger.info(f"Merged aliases: {len(entities)} → {len(merged_entities)} entities")
     return merged_entities
+
+
+def extract_cooccurrence_relationships(
+    entities: list[dict[str, Any]],
+    chunks: list[dict[str, Any]],
+    min_cooccurrences: int = 2
+) -> list[dict[str, Any]]:
+    """
+    Extract co-occurrence relationships between entities.
+
+    Args:
+        entities: List of entity dicts with 'canonical_term', 'evidence'
+        chunks: List of chunk dicts with 'chunk_id', 'text'
+        min_cooccurrences: Minimum times entities must co-occur (default: 2)
+
+    Returns:
+        List of relationship dicts with source, target, type, strength
+    """
+    # Validate inputs
+    if not isinstance(entities, list):
+        raise ValueError(f"entities must be a list, got {type(entities).__name__}")
+    if not isinstance(chunks, list):
+        raise ValueError(f"chunks must be a list, got {type(chunks).__name__}")
+    if not entities:
+        return []
+    if not chunks:
+        return []
+
+    logger.info(f"Extracting co-occurrences from {len(entities)} entities and {len(chunks)} chunks...")
+
+    # Build entity -> chunks mapping
+    entity_to_chunks: dict[str, Set[str]] = defaultdict(set)
+
+    for entity in entities:
+        term = entity.get('canonical_term', '')
+        if not term:
+            continue
+
+        # Get chunk IDs - handle both formats:
+        # 1. New format: entity.evidence[].chunk_id
+        # 2. Old format: entity.chunk_id (direct)
+        for evidence in entity.get('evidence', []):
+            chunk_id = evidence.get('chunk_id')
+            if chunk_id:
+                entity_to_chunks[term].add(chunk_id)
+
+        # Also check for direct chunk_id field (old format)
+        if 'chunk_id' in entity:
+            entity_to_chunks[term].add(entity['chunk_id'])
+
+    # Find co-occurrences
+    relationships = []
+    entity_terms = list(entity_to_chunks.keys())
+    cooccurrence_counts: dict[Tuple[str, str], int] = defaultdict(int)
+
+    for i, term_a in enumerate(entity_terms):
+        for term_b in entity_terms[i+1:]:
+            # Find common chunks
+            chunks_a = entity_to_chunks[term_a]
+            chunks_b = entity_to_chunks[term_b]
+            common_chunks = chunks_a & chunks_b
+
+            if len(common_chunks) >= min_cooccurrences:
+                # Create bidirectional relationships
+                cooccurrence_counts[(term_a, term_b)] = len(common_chunks)
+
+                # Calculate strength based on frequency
+                max_possible = min(len(chunks_a), len(chunks_b))
+                strength = len(common_chunks) / max_possible if max_possible > 0 else 0.5
+
+                relationships.append({
+                    'source': term_a,
+                    'target': term_b,
+                    'type': 'CO_OCCURS',
+                    'strength': strength,
+                    'confidence': min(1.0, len(common_chunks) / 10.0),  # Max out at 10 co-occurrences
+                    'explanation': f'Co-occurs in {len(common_chunks)} chunks',
+                    'evidence': [{'chunk_id': cid} for cid in list(common_chunks)[:5]]  # Sample up to 5
+                })
+
+    logger.info(f"✓ Found {len(relationships)} co-occurrence relationships")
+    return relationships
 
 
 def build_graph_from_entities(entities: list[dict[str, Any]]) -> nx.Graph:
@@ -233,13 +326,96 @@ def build_knowledge_graph(
     return graph_file, graphml_file, stats
 
 
+def build_knowledge_graph_with_relationships(
+    entities: list[dict[str, Any]],
+    relationships: list[dict[str, Any]],
+    output_dir: Path,
+    title: str = "Knowledge Graph"
+) -> tuple[Path, Path, dict[str, Any]]:
+    """
+    Complete graph building workflow with relationships
+
+    Args:
+        entities: List of entity dictionaries
+        relationships: List of relationship dictionaries
+        output_dir: Where to save outputs
+        title: Graph title
+
+    Returns:
+        (graph_json_path, graphml_path, statistics)
+    """
+    # Validate inputs
+    if not isinstance(entities, list):
+        raise ValueError(f"entities must be a list, got {type(entities).__name__}")
+    if not entities:
+        raise ValueError("entities list cannot be empty")
+    if not isinstance(relationships, list):
+        raise ValueError(f"relationships must be a list, got {type(relationships).__name__}")
+    if not isinstance(output_dir, Path):
+        output_dir = Path(output_dir)
+    if not output_dir.exists():
+        raise ValueError(f"output_dir does not exist: {output_dir}")
+
+    logger.info(f"Building knowledge graph from {len(entities)} entities and {len(relationships)} relationships...")
+
+    from ..core.graph_builder import GraphBuilder
+
+    # Build graph with relationships
+    builder = GraphBuilder()
+    graph = builder.build_graph(entities, relationships)
+
+    # Export JSON
+    graph_file = output_dir / 'knowledge_graph.json'
+    builder.export_json(graph, graph_file, title=title)
+
+    # Export GraphML
+    graphml_file = output_dir / 'knowledge_graph.graphml'
+    nx.write_graphml(graph, str(graphml_file))
+
+    # Create visualization
+    try:
+        cytoscape_file = output_dir / 'knowledge_graph_cytoscape.html'
+        builder.render_cytoscape(graph, cytoscape_file, title=title, node_size_by='centrality')
+        logger.info(f"✓ Created visualization: {cytoscape_file}")
+    except Exception as e:
+        logger.debug(f"Visualization creation failed (optional): {e}")
+
+    # Get statistics
+    stats = {
+        'nodes': graph.number_of_nodes(),
+        'edges': graph.number_of_edges(),
+        'density': nx.density(graph) if graph.number_of_nodes() > 1 else 0.0,
+        'categories': {},
+        'importance_levels': {}
+    }
+
+    # Category and importance distribution
+    for node, data in graph.nodes(data=True):
+        cat = data.get('category', 'unknown')
+        imp = data.get('importance', 'medium')
+        stats['categories'][cat] = stats['categories'].get(cat, 0) + 1
+        stats['importance_levels'][imp] = stats['importance_levels'].get(imp, 0) + 1
+
+    # Top concepts by centrality
+    if stats['nodes'] > 0:
+        centrality = nx.degree_centrality(graph)
+        top_concepts = sorted(centrality.items(), key=lambda x: -x[1])[:20]
+        stats['top_concepts'] = [
+            {'term': term, 'centrality': float(cent)}
+            for term, cent in top_concepts
+        ]
+
+    logger.info(f"✓ Graph built successfully: {stats['nodes']} nodes, {stats['edges']} edges")
+    return graph_file, graphml_file, stats
+
+
 def process_topic_directory(
     topic_dir: Path,
     title: str | None = None,
     output_dir: Path | None = None
 ) -> tuple[Path, Path, dict[str, Any]]:
     """
-    Complete workflow: Load concepts → Resolve → Build graph
+    Complete workflow: Load concepts → Resolve → Extract relationships → Build graph
 
     This is the main entry point for MCP server.
 
@@ -269,14 +445,18 @@ def process_topic_directory(
 
     logger.info(f"Processing topic directory: {topic_dir}")
 
-    # Load all concepts from topic directory
+    # ========================================================================
+    # STEP 1: Load concepts and chunks from all papers
+    # ========================================================================
     all_concepts: list[dict[str, Any]] = []
+    all_chunks: list[dict[str, Any]] = []
     paper_count = 0
 
     for paper_dir in sorted(topic_dir.iterdir()):
         if not paper_dir.is_dir():
             continue
 
+        # Load concepts
         concepts_file = paper_dir / 'concepts_ENRICHED.json'
         if not concepts_file.exists():
             concepts_file = paper_dir / 'concepts.json'
@@ -294,23 +474,68 @@ def process_topic_directory(
                 all_concepts.extend(concepts)
                 paper_count += 1
 
+        # Load chunks (for co-occurrence extraction)
+        chunks_file = paper_dir / 'chunks.json'
+        if chunks_file.exists():
+            with open(chunks_file, encoding='utf-8') as f:
+                chunk_data = json.load(f)
+                if isinstance(chunk_data, list):
+                    chunks = chunk_data
+                elif isinstance(chunk_data, dict) and 'chunks' in chunk_data:
+                    chunks = chunk_data['chunks']
+                else:
+                    chunks = []
+
+                all_chunks.extend(chunks)
+
     if len(all_concepts) == 0:
         raise ValueError(f"No concepts found in {topic_dir}")
 
     logger.info(f"Loaded {len(all_concepts)} concepts from {paper_count} papers")
+    logger.info(f"Loaded {len(all_chunks)} chunks for relationship extraction")
 
-    # Entity resolution
+    # ========================================================================
+    # STEP 2: Entity resolution (deduplicate concepts)
+    # ========================================================================
     entities, _ = exact_string_resolution(all_concepts)
     final_entities = known_alias_resolution(entities)
 
-    # Save entities
+    # Save entities (CACHE)
     entities_file = output_dir / 'entities.json'
     with open(entities_file, 'w', encoding='utf-8') as f:
         json.dump(final_entities, f, indent=2, ensure_ascii=False)
+    logger.info(f"✓ Cached entities: {entities_file}")
 
-    # Build graph
-    graph_file, graphml_file, stats = build_knowledge_graph(
+    # ========================================================================
+    # STEP 3: Extract co-occurrences and create relationships
+    # ========================================================================
+    relationships = []
+
+    if all_chunks:
+        logger.info("Extracting co-occurrence relationships...")
+        relationships = extract_cooccurrence_relationships(
+            final_entities,
+            all_chunks
+        )
+
+        # Save relationships (CACHE)
+        relationships_file = output_dir / 'relationships.json'
+        with open(relationships_file, 'w', encoding='utf-8') as f:
+            json.dump({
+                'num_relationships': len(relationships),
+                'relationships': relationships
+            }, f, indent=2, ensure_ascii=False)
+        logger.info(f"✓ Extracted {len(relationships)} co-occurrence relationships")
+        logger.info(f"✓ Cached relationships: {relationships_file}")
+    else:
+        logger.warning("No chunks found - building graph without relationships")
+
+    # ========================================================================
+    # STEP 4: Build graph with relationships
+    # ========================================================================
+    graph_file, graphml_file, stats = build_knowledge_graph_with_relationships(
         final_entities,
+        relationships,
         output_dir,
         title
     )
@@ -319,6 +544,7 @@ def process_topic_directory(
     stats['papers_processed'] = paper_count
     stats['input_concepts'] = len(all_concepts)
     stats['final_entities'] = len(final_entities)
+    stats['relationships'] = len(relationships)
     stats['reduction_percentage'] = 100 * (1 - len(final_entities) / len(all_concepts))
 
     return graph_file, graphml_file, stats
