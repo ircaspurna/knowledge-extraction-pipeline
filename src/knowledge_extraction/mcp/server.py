@@ -801,12 +801,17 @@ async def handle_parse_extraction_responses(args: Dict[str, Any]) -> List[TextCo
 
     for i, response in enumerate(responses_data.get('responses', [])):
         try:
-            metadata = response['metadata']
+            metadata = response.get('metadata', {})
+            # chunk_id can be at response level OR in metadata (handle both formats)
+            chunk_id = response.get('chunk_id') or metadata.get('chunk_id')
+            source_file = metadata.get('source_file', 'unknown')
+            page = metadata.get('page', 0)
+
             concepts = extractor.parse_extraction_response(
-                response['response_text'],
-                metadata['chunk_id'],
-                metadata['source_file'],
-                metadata['page']
+                response.get('response_text', ''),
+                chunk_id,
+                source_file,
+                page
             )
             all_concepts.extend(concepts)
         except Exception as e:
