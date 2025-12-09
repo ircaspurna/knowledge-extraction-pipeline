@@ -1092,7 +1092,7 @@ async def handle_create_semantic_chunks(args: Dict[str, Any]) -> List[TextConten
         doc_data = json.load(f)
 
     # Create chunks
-    chunker = SemanticChunker(chunk_size=chunk_size, overlap=overlap)
+    chunker = SemanticChunker(target_chunk_size=chunk_size)
     chunks = chunker.chunk_document(doc_data)
 
     # Save chunks
@@ -1281,7 +1281,7 @@ async def handle_batch_process_pdfs(args: Dict[str, Any]) -> List[TextContent]:
                 json.dump(doc_data, f, indent=2)
 
             # Create chunks
-            chunker = SemanticChunker(chunk_size=1000, overlap=200)
+            chunker = SemanticChunker(target_chunk_size=1000)
             chunks = chunker.chunk_document(doc_data)
 
             # Save chunks
