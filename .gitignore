@@ -72,6 +72,14 @@ knowledge_graph*.graphml
 ambiguous_pairs*.json
 relationship_extraction*.json
 entity_co_occurrences*.json
+batch_results*.json
+batch_*_metrics.json
+
+# Test output directories
+test_real_pdfs/
+test_*/
+batch_output/
+test_cli_flags/
 
 # Keep examples
 !examples/**/*.json
