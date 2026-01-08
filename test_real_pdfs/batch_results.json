@@ -1,0 +1,158 @@
+{
+  "timestamp": "2026-01-08T17:27:04.338844",
+  "total_files": 10,
+  "successful": 10,
+  "failed": 0,
+  "results": [
+    {
+      "file": "Analysis_2022_Detecting_Deception_Analysis_Competing_Hypotheses.pdf",
+      "success": true,
+      "error": null,
+      "stats": {
+        "pages": 7,
+        "chars": 26061,
+        "chunks": 33,
+        "batches": 8,
+        "reduction_pct": 75.75757575757575,
+        "concepts": 0,
+        "elapsed_seconds": 9.379956007003784
+      },
+      "output_dir": "/Users/IRI/Knowledge Base/Pipeline/Open Source/knowledge-extraction-pipeline/test_real_pdfs/Analysis_2022_Detecting_Deception_Analysis_Competing_Hypotheses"
+    },
+    {
+      "file": "Brzic_2023_Detecting_Deception_Using_Natural.pdf",
+      "success": true,
+      "error": null,
+      "stats": {
+        "pages": 34,
+        "chars": 116334,
+        "chunks": 147,
+        "batches": 44,
+        "reduction_pct": 70.06802721088435,
+        "concepts": 0,
+        "elapsed_seconds": 23.831737756729126
+      },
+      "output_dir": "/Users/IRI/Knowledge Base/Pipeline/Open Source/knowledge-extraction-pipeline/test_real_pdfs/Brzic_2023_Detecting_Deception_Using_Natural"
+    },
+    {
+      "file": "Choudhury_2024_PU_Lie_Lightweight_Deception_Detection.pdf",
+      "success": true,
+      "error": null,
+      "stats": {
+        "pages": 5,
+        "chars": 23585,
+        "chunks": 22,
+        "batches": 7,
+        "reduction_pct": 68.18181818181819,
+        "concepts": 0,
+        "elapsed_seconds": 7.51869010925293
+      },
+      "output_dir": "/Users/IRI/Knowledge Base/Pipeline/Open Source/knowledge-extraction-pipeline/test_real_pdfs/Choudhury_2024_PU_Lie_Lightweight_Deception_Detection"
+    },
+    {
+      "file": "Const\u00e2ncio_2023_Deception_detection_with_machine.pdf",
+      "success": true,
+      "error": null,
+      "stats": {
+        "pages": 31,
+        "chars": 114062,
+        "chunks": 236,
+        "batches": 45,
+        "reduction_pct": 80.93220338983052,
+        "concepts": 0,
+        "elapsed_seconds": 36.8295738697052
+      },
+      "output_dir": "/Users/IRI/Knowledge Base/Pipeline/Open Source/knowledge-extraction-pipeline/test_real_pdfs/Const\u00e2ncio_2023_Deception_detection_with_machine"
+    },
+    {
+      "file": "Huang_2015_investigation_Zipf_Law_for_fraud.pdf",
+      "success": true,
+      "error": null,
+      "stats": {
+        "pages": 3,
+        "chars": 10908,
+        "chunks": 13,
+        "batches": 4,
+        "reduction_pct": 69.23076923076923,
+        "concepts": 0,
+        "elapsed_seconds": 5.672793865203857
+      },
+      "output_dir": "/Users/IRI/Knowledge Base/Pipeline/Open Source/knowledge-extraction-pipeline/test_real_pdfs/Huang_2015_investigation_Zipf_Law_for_fraud"
+    },
+    {
+      "file": "Kleinberg_2018_Automated_verbal_credibility_assessment.pdf",
+      "success": true,
+      "error": null,
+      "stats": {
+        "pages": 13,
+        "chars": 76430,
+        "chunks": 106,
+        "batches": 31,
+        "reduction_pct": 70.75471698113208,
+        "concepts": 0,
+        "elapsed_seconds": 21.420866012573242
+      },
+      "output_dir": "/Users/IRI/Knowledge Base/Pipeline/Open Source/knowledge-extraction-pipeline/test_real_pdfs/Kleinberg_2018_Automated_verbal_credibility_assessment"
+    },
+    {
+      "file": "Luan_2021_Sparse_Dense_Attentional_Representations.pdf",
+      "success": true,
+      "error": null,
+      "stats": {
+        "pages": 26,
+        "chars": 48383,
+        "chunks": 59,
+        "batches": 17,
+        "reduction_pct": 71.1864406779661,
+        "concepts": 0,
+        "elapsed_seconds": 15.335941076278687
+      },
+      "output_dir": "/Users/IRI/Knowledge Base/Pipeline/Open Source/knowledge-extraction-pipeline/test_real_pdfs/Luan_2021_Sparse_Dense_Attentional_Representations"
+    },
+    {
+      "file": "Markowitz_2024_Deconstructing_deception_Frequency_communicator.pdf",
+      "success": true,
+      "error": null,
+      "stats": {
+        "pages": 16,
+        "chars": 90231,
+        "chunks": 114,
+        "batches": 38,
+        "reduction_pct": 66.66666666666667,
+        "concepts": 0,
+        "elapsed_seconds": 26.869982957839966
+      },
+      "output_dir": "/Users/IRI/Knowledge Base/Pipeline/Open Source/knowledge-extraction-pipeline/test_real_pdfs/Markowitz_2024_Deconstructing_deception_Frequency_communicator"
+    },
+    {
+      "file": "Verma_2024_Roadmap_for_Multilingual_Multimodal_Domain.pdf",
+      "success": true,
+      "error": null,
+      "stats": {
+        "pages": 6,
+        "chars": 28829,
+        "chunks": 32,
+        "batches": 8,
+        "reduction_pct": 75.0,
+        "concepts": 0,
+        "elapsed_seconds": 9.672481775283813
+      },
+      "output_dir": "/Users/IRI/Knowledge Base/Pipeline/Open Source/knowledge-extraction-pipeline/test_real_pdfs/Verma_2024_Roadmap_for_Multilingual_Multimodal_Domain"
+    },
+    {
+      "file": "extracting_2018_Text-Based_Detection_and_Understanding_Changes.pdf",
+      "success": true,
+      "error": null,
+      "stats": {
+        "pages": 11,
+        "chars": 35028,
+        "chunks": 73,
+        "batches": 10,
+        "reduction_pct": 86.3013698630137,
+        "concepts": 0,
+        "elapsed_seconds": 11.42118787765503
+      },
+      "output_dir": "/Users/IRI/Knowledge Base/Pipeline/Open Source/knowledge-extraction-pipeline/test_real_pdfs/extracting_2018_Text-Based_Detection_and_Understanding_Changes"
+    }
+  ]
+}
