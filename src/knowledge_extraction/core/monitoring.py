@@ -37,22 +37,22 @@ class PhaseMetrics:
     items_failed: int = 0
     errors: List[str] = field(default_factory=list)
 
-    def start(self):
+    def start(self) -> None:
         """Mark phase as started"""
         self.started_at = time.time()
 
-    def complete(self):
+    def complete(self) -> None:
         """Mark phase as completed"""
         self.completed_at = time.time()
         if self.started_at > 0:
             self.duration = self.completed_at - self.started_at
 
-    def add_error(self, error: str):
+    def add_error(self, error: str) -> None:
         """Record an error"""
         self.errors.append(error)
         self.items_failed += 1
 
-    def add_success(self):
+    def add_success(self) -> None:
         """Record a successful item"""
         self.items_processed += 1
 
@@ -88,11 +88,11 @@ class PaperMetrics:
     success: bool = False
     error_message: Optional[str] = None
 
-    def start(self):
+    def start(self) -> None:
         """Mark paper processing as started"""
         self.started_at = time.time()
 
-    def complete(self, success: bool = True, error: Optional[str] = None):
+    def complete(self, success: bool = True, error: Optional[str] = None) -> None:
         """Mark paper processing as completed"""
         self.completed_at = time.time()
         if self.started_at > 0:
@@ -140,19 +140,19 @@ class BatchMetrics:
     # Paper-level metrics
     paper_metrics: Dict[str, PaperMetrics] = field(default_factory=dict)
 
-    def start(self):
+    def start(self) -> None:
         """Mark batch processing as started"""
         self.started_at = time.time()
         self._update_memory_usage()
 
-    def complete(self):
+    def complete(self) -> None:
         """Mark batch processing as completed"""
         self.completed_at = time.time()
         if self.started_at > 0:
             self.duration = self.completed_at - self.started_at
         self._calculate_derived_metrics()
 
-    def _update_memory_usage(self):
+    def _update_memory_usage(self) -> None:
         """Update memory usage statistics"""
         process = psutil.Process()
         current_mb = process.memory_info().rss / (1024 * 1024)
@@ -166,7 +166,7 @@ class BatchMetrics:
 
         self.cpu_percent = process.cpu_percent()
 
-    def _calculate_derived_metrics(self):
+    def _calculate_derived_metrics(self) -> None:
         """Calculate derived metrics from raw data"""
         if self.duration > 0:
             self.papers_per_minute = (self.papers_succeeded / self.duration) * 60
@@ -228,17 +228,17 @@ class ProgressMonitor:
         self.current_paper: Optional[str] = None
         self.current_phase: Optional[str] = None
 
-    def start_batch(self):
+    def start_batch(self) -> None:
         """Start monitoring batch processing"""
         self.metrics.start()
         logger.info(f"📊 Monitoring started for batch: {self.batch_id}")
 
-    def complete_batch(self):
+    def complete_batch(self) -> None:
         """Complete batch monitoring and generate report"""
         self.metrics.complete()
         logger.info(f"📊 Monitoring completed for batch: {self.batch_id}")
 
-    def start_paper(self, filename: str):
+    def start_paper(self, filename: str) -> None:
         """Start monitoring a paper"""
         self.current_paper = filename
         if filename not in self.metrics.paper_metrics:
@@ -250,7 +250,7 @@ class ProgressMonitor:
         filename: str,
         success: bool = True,
         error: Optional[str] = None
-    ):
+    ) -> None:
         """Complete paper monitoring"""
         if filename in self.metrics.paper_metrics:
             self.metrics.paper_metrics[filename].complete(success, error)
@@ -263,14 +263,14 @@ class ProgressMonitor:
         self.current_paper = None
         self.metrics._update_memory_usage()
 
-    def start_phase(self, phase_name: str):
+    def start_phase(self, phase_name: str) -> None:
         """Start monitoring a phase"""
         self.current_phase = phase_name
         if phase_name not in self.metrics.phase_metrics:
             self.metrics.phase_metrics[phase_name] = PhaseMetrics(phase_name=phase_name)
         self.metrics.phase_metrics[phase_name].start()
 
-    def complete_phase(self, phase_name: str):
+    def complete_phase(self, phase_name: str) -> None:
         """Complete phase monitoring"""
         if phase_name in self.metrics.phase_metrics:
             self.metrics.phase_metrics[phase_name].complete()
@@ -286,7 +286,7 @@ class ProgressMonitor:
         semantic_batches: int = 0,
         batching_reduction_pct: float = 0.0,
         vectors_indexed: int = 0
-    ):
+    ) -> None:
         """Record statistics for a paper"""
         if filename not in self.metrics.paper_metrics:
             self.metrics.paper_metrics[filename] = PaperMetrics(filename=filename)
@@ -424,7 +424,7 @@ class ProgressMonitor:
 
         return "\n".join(report)
 
-    def export_metrics(self, output_path: Path):
+    def export_metrics(self, output_path: Path) -> None:
         """Export metrics to JSON file"""
         output_path.parent.mkdir(parents=True, exist_ok=True)
 

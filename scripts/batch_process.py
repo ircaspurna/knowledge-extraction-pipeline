@@ -40,7 +40,9 @@ def process_single_pdf(
     input_file: Path,
     output_dir: Path,
     sample_chunks: int | None = None,
-    extract_concepts: bool = True
+    extract_concepts: bool = True,
+    use_semantic_batching: bool = True,  # NEW v4.0: Enable semantic batching
+    chunks_per_batch: int = 4  # NEW v4.0: Chunks per semantic batch
 ) -> dict[str, Any]:
     """
     Process a single PDF through the pipeline.
@@ -50,6 +52,8 @@ def process_single_pdf(
         output_dir: Output directory for this PDF
         sample_chunks: Limit to N chunks for testing
         extract_concepts: Whether to generate extraction prompts
+        use_semantic_batching: Enable semantic batching (70% cost reduction)
+        chunks_per_batch: Target chunks per semantic batch
 
     Returns:
         dict with processing stats and status
@@ -122,6 +126,13 @@ def process_single_pdf(
         if sample_chunks:
             chunks = chunks[:sample_chunks]
 
+        # Filter empty chunks immediately after chunking
+        valid_chunks = [c for c in chunks if c.text and c.text.strip()]
+        if len(valid_chunks) < len(chunks):
+            empty_count = len(chunks) - len(valid_chunks)
+            logger.warning(f"  ⚠️  Filtered {empty_count} empty chunks from chunker output")
+            chunks = valid_chunks
+
         logger.info(f"  ✓ Created {len(chunks)} semantic chunks")
 
         # Save chunks
@@ -141,6 +152,12 @@ def process_single_pdf(
         # =====================================================================
 
         print_step("Indexing chunks into vector database...")
+
+        if not chunks:
+            logger.error("  ❌ No chunks to index")
+            result['error'] = "No chunks to index"
+            return result
+
         db_path = output_dir / "chroma_db"
         vector_store = VectorStore(db_path=str(db_path))
         vector_store.index_chunks([c.to_dict() for c in chunks])
@@ -159,8 +176,8 @@ def process_single_pdf(
             create_batch_extraction_file(
                 [c.to_dict() for c in chunks],
                 extraction_batch_file,
-                use_semantic_batching=True,  # ✅ NEW v4.0: 70% cost reduction
-                chunks_per_batch=4
+                use_semantic_batching=use_semantic_batching,
+                chunks_per_batch=chunks_per_batch
             )
 
             # Track batching stats
@@ -255,13 +272,15 @@ def batch_process(
     max_files: int | None = None,
     extract_concepts: bool = False,  # Disabled by default since we need Claude
     checkpoint_interval: int = 3,  # NEW v4.0: Show progress every N papers
-    enable_monitoring: bool = True  # NEW v4.0: Enhanced progress tracking
+    enable_monitoring: bool = True,  # NEW v4.0: Enhanced progress tracking
+    use_semantic_batching: bool = True,  # NEW v4.0: Semantic batching (70% cost reduction)
+    chunks_per_batch: int = 4  # NEW v4.0: Chunks per semantic batch
 ) -> list[dict[str, Any]]:
     """
     Process all PDFs in a directory.
 
     NEW in v4.0: Enhanced monitoring with real-time progress, resource tracking,
-    and comprehensive final reports.
+    semantic batching (70% cost reduction), and comprehensive final reports.
 
     Args:
         input_dir: Directory containing PDFs
@@ -271,6 +290,8 @@ def batch_process(
         extract_concepts: Whether to extract concepts (requires Claude)
         checkpoint_interval: Show progress summary every N papers (default: 3)
         enable_monitoring: Enable enhanced monitoring (default: True)
+        use_semantic_batching: Enable semantic batching for 70% cost reduction (default: True)
+        chunks_per_batch: Target chunks per semantic batch (default: 4)
 
     Returns:
         List of result dicts for each processed file
@@ -351,7 +372,9 @@ def batch_process(
             pdf_file,
             output_dir,
             sample_chunks=sample_chunks,
-            extract_concepts=extract_concepts
+            extract_concepts=extract_concepts,
+            use_semantic_batching=use_semantic_batching,
+            chunks_per_batch=chunks_per_batch
         )
 
         results.append(result)
@@ -454,6 +477,16 @@ def main() -> int:
     parser.add_argument('--verbose', '-v', action='store_true',
                        help='Enable verbose logging')
 
+    # NEW v4.0: Semantic batching controls
+    parser.add_argument('--no-semantic-batching', action='store_true',
+                       help='Disable semantic batching (NOT recommended - increases costs by 3x)')
+    parser.add_argument('--chunks-per-batch', type=int, default=4,
+                       help='Target chunks per semantic batch (default: 4)')
+
+    # NEW v4.0: Monitoring controls
+    parser.add_argument('--no-monitoring', action='store_true',
+                       help='Disable progress monitoring and metrics collection')
+
     args = parser.parse_args()
 
     # Set log level
@@ -466,7 +499,10 @@ def main() -> int:
             output_base_dir=args.output,
             sample_chunks=args.sample,
             max_files=args.max_files,
-            extract_concepts=args.extract_concepts
+            extract_concepts=args.extract_concepts,
+            use_semantic_batching=not args.no_semantic_batching,
+            chunks_per_batch=args.chunks_per_batch,
+            enable_monitoring=not args.no_monitoring
         )
 
         # Return success if any files processed
