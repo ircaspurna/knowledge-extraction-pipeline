@@ -17,7 +17,7 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 # Import from installed package
-from knowledge_extraction.core import DocumentProcessor, GraphBuilder, SemanticChunker, VectorStore
+from knowledge_extraction.core import DocumentProcessor, GraphBuilder, SemanticChunker, VectorStore, ProgressMonitor
 from knowledge_extraction.extraction import ConceptExtractorMCP, EntityResolverMCP
 from knowledge_extraction.extraction.concept_extractor import create_batch_extraction_file
 
@@ -156,7 +156,23 @@ def process_single_pdf(
             extractor = ConceptExtractorMCP()
 
             extraction_batch_file = output_dir / "extraction_batch.json"
-            create_batch_extraction_file([c.to_dict() for c in chunks], extraction_batch_file)
+            create_batch_extraction_file(
+                [c.to_dict() for c in chunks],
+                extraction_batch_file,
+                use_semantic_batching=True,  # ✅ NEW v4.0: 70% cost reduction
+                chunks_per_batch=4
+            )
+
+            # Track batching stats
+            if extraction_batch_file.exists():
+                with open(extraction_batch_file, 'r') as f:
+                    batch_data = json.load(f)
+                    result['stats']['batches'] = len(batch_data.get('prompts', []))
+                    if batch_data.get('semantic_batching_enabled'):
+                        original = result['stats']['chunks']
+                        batches = result['stats']['batches']
+                        if original > 0:
+                            result['stats']['reduction_pct'] = (1 - batches/original) * 100
 
             logger.info("")
             logger.info("  " + "="*66)
@@ -237,10 +253,15 @@ def batch_process(
     output_base_dir: Path,
     sample_chunks: int | None = None,
     max_files: int | None = None,
-    extract_concepts: bool = False  # Disabled by default since we need Claude
+    extract_concepts: bool = False,  # Disabled by default since we need Claude
+    checkpoint_interval: int = 3,  # NEW v4.0: Show progress every N papers
+    enable_monitoring: bool = True  # NEW v4.0: Enhanced progress tracking
 ) -> list[dict[str, Any]]:
     """
     Process all PDFs in a directory.
+
+    NEW in v4.0: Enhanced monitoring with real-time progress, resource tracking,
+    and comprehensive final reports.
 
     Args:
         input_dir: Directory containing PDFs
@@ -248,6 +269,8 @@ def batch_process(
         sample_chunks: Only process N chunks per file (for testing)
         max_files: Only process first N files
         extract_concepts: Whether to extract concepts (requires Claude)
+        checkpoint_interval: Show progress summary every N papers (default: 3)
+        enable_monitoring: Enable enhanced monitoring (default: True)
 
     Returns:
         List of result dicts for each processed file
@@ -290,6 +313,15 @@ def batch_process(
     if sample_chunks:
         logger.info(f"Sample mode: {sample_chunks} chunks per file")
 
+    # =========================================================================
+    # INITIALIZE MONITORING (NEW v4.0)
+    # =========================================================================
+    monitor: ProgressMonitor | None = None
+    if enable_monitoring:
+        batch_id = f"batch_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        monitor = ProgressMonitor(batch_id=batch_id, total_papers=len(pdf_files))
+        monitor.start_batch()
+
     # Process each file
     results = []
     successful = 0
@@ -310,6 +342,10 @@ def batch_process(
         logger.info(f"[{i}/{len(pdf_files)}] {pdf_file.name}")
         logger.info(f"{'='*70}")
 
+        # Start monitoring paper
+        if monitor:
+            monitor.start_paper(pdf_file.name)
+
         # Process
         result = process_single_pdf(
             pdf_file,
@@ -320,6 +356,27 @@ def batch_process(
 
         results.append(result)
 
+        # Update monitoring
+        if monitor:
+            monitor.record_paper_stats(
+                filename=pdf_file.name,
+                text_length=result['stats'].get('chars', 0),
+                num_pages=result['stats'].get('pages', 0),
+                chunks_created=result['stats'].get('chunks', 0),
+                semantic_batches=result['stats'].get('batches', 0),
+                batching_reduction_pct=result['stats'].get('reduction_pct', 0),
+                vectors_indexed=result['stats'].get('chunks', 0)
+            )
+            monitor.complete_paper(
+                pdf_file.name,
+                success=result['success'],
+                error=result.get('error')
+            )
+
+            # Show progress summary at checkpoints
+            if i % checkpoint_interval == 0:
+                print(monitor.get_progress_summary())
+
         if result['success']:
             successful += 1
         else:
@@ -328,6 +385,17 @@ def batch_process(
     # =========================================================================
     # SUMMARY
     # =========================================================================
+
+    # Generate final monitoring report (NEW v4.0)
+    if monitor:
+        monitor.complete_batch()
+        final_report = monitor.generate_final_report()
+        print(final_report)
+
+        # Export metrics
+        metrics_file = output_base_dir / f"{monitor.batch_id}_metrics.json"
+        monitor.export_metrics(metrics_file)
+        logger.info(f"📊 Metrics exported to: {metrics_file}")
 
     print_header("✅ BATCH PROCESSING COMPLETE")
     logger.info(f"Total files: {len(pdf_files)}")
