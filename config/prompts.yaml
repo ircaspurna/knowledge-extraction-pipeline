@@ -40,6 +40,11 @@ concept_extraction:
     - Be conservative: better to miss a concept than extract noise
 
   user_template: |
+    **IMPORTANT: Include this exact metadata in your response:**
+    chunk_id: {chunk_id}
+    source_file: {source_file}
+    page: {page}
+
     Extract key concepts from the following passage. For each concept:
 
     1. **Term**: Exact phrase from text (prefer 2-5 words)
@@ -51,6 +56,28 @@ concept_extraction:
 
     **CRITICAL RULES**:
     {domain_rules}
+
+    **OUTPUT FORMAT** (JSON only, no markdown):
+    {{
+      "chunk_id": "{chunk_id}",
+      "source_file": "{source_file}",
+      "page": {page},
+      "concepts": [
+        {{
+          "term": "...",
+          "definition": "...",
+          "category": "...",
+          "importance": "...",
+          "justification": "...",
+          "quote": "..."
+        }}
+      ]
+    }}
+
+    **Passage**:
+    {passage}
+
+    Extract concepts:
 
 # ==============================================================================
 # DISSERTATION CONTEXT EXTRACTION - Permissive Mode for Research Context
@@ -77,6 +104,11 @@ dissertation_context_extraction:
     - Context relevant to understanding the research domain
 
   user_template: |
+    **IMPORTANT: Include this exact metadata in your response:**
+    chunk_id: {chunk_id}
+    source_file: {source_file}
+    page: {page}
+
     Extract research context from the following passage. For each piece of information:
 
     1. **Term**: Method, finding, problem, or concept name (2-5 words)
@@ -182,6 +214,9 @@ dissertation_context_extraction:
 
     **OUTPUT FORMAT** (JSON only, no markdown):
     {{
+      "chunk_id": "{chunk_id}",
+      "source_file": "{source_file}",
+      "page": {page},
       "concepts": [
         {{
           "term": "...",
@@ -233,6 +268,11 @@ concept_extraction_conservative:
     - Be conservative: better to miss a concept than extract noise
 
   user_template: |
+    **IMPORTANT: Include this exact metadata in your response:**
+    chunk_id: {chunk_id}
+    source_file: {source_file}
+    page: {page}
+
     Extract key concepts from the following passage. For each concept:
 
     1. **Term**: Exact phrase from text (prefer 2-5 words)
@@ -272,6 +312,9 @@ concept_extraction_conservative:
 
     **OUTPUT FORMAT** (JSON only, no markdown):
     {{
+      "chunk_id": "{chunk_id}",
+      "source_file": "{source_file}",
+      "page": {page},
       "concepts": [
         {{
           "term": "...",

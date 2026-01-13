@@ -1,8 +1,28 @@
 # Knowledge Extraction Pipeline - Complete Workflow Guide
 
-**Version:** 3.0 (100% MCP-Native)
-**Last Updated:** 2025-12-01
+**Version:** 3.1 (100% MCP-Native)
+**Last Updated:** 2026-01-12
 **Status:** ✅ Production Ready
+
+---
+
+## ⚠️ CRITICAL: Preventing Data Loss
+
+**DO NOT bypass the MCP workflow or manually edit JSON files!**
+
+Skipping the `parse_extraction_responses` tool breaks metadata flow and causes **0 relationships** in your knowledge graph.
+
+### The Problem
+
+When metadata (especially `chunk_id`) is lost during extraction:
+- ✅ Entities extracted: Yes (203 concepts)
+- ❌ Relationships found: **ZERO** (graph is disconnected)
+
+### The Solution
+
+**ALWAYS use `parse_extraction_responses` after processing extraction prompts.**
+
+This tool preserves the critical `chunk_id` metadata that links concepts to text chunks, enabling relationship extraction. See [Troubleshooting](#-troubleshooting) below for details.
 
 ---
 
@@ -353,6 +373,53 @@ Output:
 ---
 
 ## 🔍 Troubleshooting
+
+### Zero Relationships in Knowledge Graph ⚠️ CRITICAL
+
+**Problem:** Graph shows nodes but 0 edges (e.g., "203 nodes, 0 edges")
+
+**Cause:** Metadata flow broken - `chunk_id` fields are empty in entities
+
+**Diagnosis:**
+```python
+import json
+with open('entities.json') as f:
+    entities = json.load(f).get('entities', [])
+
+empty = sum(1 for e in entities for ev in e.get('evidence', [])
+            if not ev.get('chunk_id'))
+
+if empty > 0:
+    print(f"⚠️ WORKFLOW ERROR: {empty} empty chunk_ids!")
+```
+
+**Solutions:**
+
+1. **If you manually created concept files:**
+   - ❌ Don't do this! It breaks metadata flow
+   - ✅ Start over using MCP tools (see Quick Start)
+   - Specifically: **MUST use `parse_extraction_responses`**
+
+2. **If you skipped `parse_extraction_responses`:**
+   - This tool is NOT optional - it injects `chunk_id` metadata
+   - Re-run: `parse_extraction_responses(responses_file, output_file)`
+   - Verify output has non-empty `chunk_id` fields
+
+3. **Emergency repair (for already-broken data):**
+   ```python
+   # Use repair tool to match quotes back to chunks
+   from Pipeline import chunk_id_repair
+   chunk_id_repair.repair('output_directory/')
+   ```
+
+**Prevention:**
+- ALWAYS use complete MCP workflow (never skip steps)
+- NEVER manually edit JSON files
+- Use `parse_extraction_responses` after processing prompts
+
+See [Critical Warning](#️-critical-preventing-data-loss) above.
+
+---
 
 ### MCP Server Not Found
 

@@ -61,6 +61,11 @@ class ConceptExtractorMCP:
     # Fallback prompts if config file not found
     FALLBACK_EXTRACTION_PROMPT = """You are a research assistant extracting key concepts from academic texts.
 
+**IMPORTANT: Include this exact metadata in your response:**
+chunk_id: {chunk_id}
+source_file: {source_file}
+page: {page}
+
 Extract important concepts from this passage. For EACH concept, provide:
 
 1. **Term**: The exact phrase from the text (2-5 words preferred)
@@ -80,6 +85,9 @@ Extract important concepts from this passage. For EACH concept, provide:
 **Output Format** (JSON):
 ```json
 {{
+  "chunk_id": "{chunk_id}",
+  "source_file": "{source_file}",
+  "page": {page},
   "concepts": [
     {{
       "term": "Loss Aversion",
@@ -390,7 +398,13 @@ Validate:"""
                 }
             }
         """
-        prompt = self.EXTRACTION_PROMPT.format(passage=chunk_text)
+        # Format prompt with passage AND metadata to ensure chunk_id is in the response
+        prompt = self.EXTRACTION_PROMPT.format(
+            passage=chunk_text,
+            chunk_id=chunk_id,
+            source_file=source_file,
+            page=page
+        )
 
         return {
             'prompt': prompt,
@@ -411,16 +425,27 @@ Validate:"""
     ) -> list[ExtractedConcept]:
         """
         Parse Claude's response into ExtractedConcept objects.
-        
+
         Args:
             response_text: Claude's JSON response
-            chunk_id: Chunk identifier
+            chunk_id: Chunk identifier (REQUIRED - must not be empty)
             source_file: Source filename
             page: Page number
-        
+
         Returns:
             List of validated concepts
+
+        Raises:
+            ValueError: If chunk_id is empty (prevents silent metadata loss)
         """
+        # CRITICAL: Validate chunk_id to prevent silent metadata loss
+        if not chunk_id or chunk_id.strip() == '':
+            raise ValueError(
+                "chunk_id cannot be empty. This indicates a workflow error where "
+                "metadata was not properly preserved. Ensure you're using the MCP "
+                "parse_extraction_responses tool, not manual JSON processing."
+            )
+
         try:
             # Extract JSON from response
             json_match = re.search(r'```json\s*(\{.*?\})\s*```', response_text, re.DOTALL)
