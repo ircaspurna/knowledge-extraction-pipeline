@@ -321,7 +321,7 @@ Decision:"""
             confidences.append(concept1.get('confidence', 0.5))
 
             evidence.append({
-                'chunk_id': concept1.get('chunk_id', ''),
+                'chunk_id': concept1.get('source_chunk_id', concept1.get('chunk_id', '')),
                 'quote': concept1.get('quote', ''),
                 'page': concept1.get('page', 1)
             })
@@ -392,7 +392,7 @@ Decision:"""
                     confidences.append(concept2.get('confidence', 0.5))
 
                     evidence.append({
-                        'chunk_id': concept2.get('chunk_id', ''),
+                        'chunk_id': concept2.get('source_chunk_id', concept2.get('chunk_id', '')),
                         'quote': concept2.get('quote', ''),
                         'page': concept2.get('page', 1),
                         'merge_reason': merge_reason
