@@ -121,12 +121,33 @@ Classify the relationship:"""
 
         # Build entity -> chunks mapping
         entity_to_chunks = defaultdict(list)
+        invalid_chunk_count = 0
+        total_evidence_count = 0
 
         for entity in entities:
             for evidence in entity.get('evidence', []):
+                total_evidence_count += 1
                 chunk_id = evidence.get('chunk_id')
-                if chunk_id:
+                if chunk_id and chunk_id != "unknown":
                     entity_to_chunks[entity['canonical_term']].append(chunk_id)
+                else:
+                    invalid_chunk_count += 1
+
+        # Warn if significant chunk_id issues
+        if total_evidence_count > 0:
+            invalid_pct = (invalid_chunk_count / total_evidence_count) * 100
+            if invalid_pct > 10:
+                logger.warning(
+                    f"⚠️ {invalid_chunk_count}/{total_evidence_count} evidence items "
+                    f"({invalid_pct:.1f}%) have invalid chunk_ids! "
+                    f"This will significantly reduce relationship detection."
+                )
+                logger.warning("💡 Consider running chunk_id_repair.py to fix entities.json")
+            elif invalid_chunk_count > 0:
+                logger.info(
+                    f"Note: {invalid_chunk_count}/{total_evidence_count} evidence items "
+                    f"({invalid_pct:.1f}%) have invalid chunk_ids (skipped)"
+                )
 
         # Build chunk index for quick lookup
         chunk_index = {c['chunk_id']: c for c in chunks}
