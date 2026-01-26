@@ -5,6 +5,81 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.0.1] - 2026-01-26
+
+### 🐛 Bug Fixes
+
+#### Relationship Extractor - Invalid Chunk ID Warning System
+
+**Fixed:** Silent failure when entities have invalid/unknown chunk_ids during relationship extraction
+
+**Problem:**
+- `find_co_occurrences()` silently skipped entities with `chunk_id: "unknown"` or missing chunk_ids
+- No warning to users when relationship detection was significantly impacted
+- Could result in 0 relationships being found despite having valid entities
+
+**Solution:**
+- Added validation tracking for invalid chunk_ids
+- Warns when >10% of evidence items have invalid chunk_ids
+- Provides actionable fix suggestion (run chunk_id_repair.py)
+- Informational message when 1-10% invalid
+
+**Impact:**
+- Early detection of data quality issues
+- Users now alerted to run repair tools before relationship extraction
+- Prevents silent failures in relationship detection
+
+**Example output:**
+```
+⚠️ 842/842 evidence items (100.0%) have invalid chunk_ids!
+   This will significantly reduce relationship detection.
+💡 Consider running chunk_id_repair.py to fix entities.json
+```
+
+**Code quality:**
+- ✅ Passes `mypy --strict` type checking
+- ✅ No breaking changes to API
+- ✅ Backward compatible
+
+**Files changed:**
+- `src/knowledge_extraction/extraction/relationship_extractor.py`
+
+### ✨ Added
+
+#### Relationship Type Classification Script
+
+**New:** `scripts/type_relationships.py` - Standalone utility to upgrade generic relationships to semantic types
+
+**Purpose:**
+- Upgrades "RELATED" or "CO_OCCURS" relationships to semantic types based on entity categories
+- Uses 40+ category-pair mappings (method→concept = APPLIES_TO, theory→phenomenon = EXPLAINS, etc.)
+- Complements the existing `infer_relationships_tfidf.py` (which creates NEW relationships)
+
+**Usage:**
+```bash
+python3 scripts/type_relationships.py entities.json relationships.json
+
+# Result: relationships.json updated with semantic types
+# Example: 76.5% of relationships upgraded (3,599/4,707)
+```
+
+**Features:**
+- Automatic backup creation before modification
+- Supports both list and dict JSON formats
+- Comprehensive statistics reporting
+- 25+ semantic relationship types:
+  - VARIANT_OF, USES, STUDIES, IMPLEMENTS, EVALUATES
+  - EXPLAINS, QUANTIFIES, PRODUCES, APPLIES_TO
+  - GOVERNS, GUIDES, MEASURES, etc.
+
+**When to use:**
+- After extracting co-occurrence relationships
+- When entities have category assignments
+- To add semantic meaning to generic "RELATED" relationships
+
+**Files added:**
+- `scripts/type_relationships.py`
+
 ## [4.0.0] - 2026-01-08
 
 ### 🎉 Major Features
