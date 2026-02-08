@@ -111,10 +111,30 @@ class SemanticChunker:
         self.dbscan_eps = dbscan_eps
         self.dbscan_min_samples = dbscan_min_samples
 
-        # Initialize embedding model
+        # Initialize embedding model (prefer local cache to avoid SSL failures)
         if EMBEDDINGS_AVAILABLE:
-            self.embedder = SentenceTransformer(embedding_model)
-            logger.info(f"Semantic chunking enabled with {embedding_model}")
+            try:
+                # First try loading from local cache only (no network)
+                import os
+                os.environ.setdefault('HF_HUB_OFFLINE', '1')
+                self.embedder = SentenceTransformer(embedding_model)
+                logger.info(f"Semantic chunking enabled with {embedding_model} (from cache)")
+            except Exception:
+                try:
+                    # If cache miss, allow network download
+                    os.environ.pop('HF_HUB_OFFLINE', None)
+                    logger.info(f"Model not in cache, downloading {embedding_model}...")
+                    self.embedder = SentenceTransformer(embedding_model)
+                    logger.info(f"Semantic chunking enabled with {embedding_model} (downloaded)")
+                except Exception as net_err:
+                    logger.warning(
+                        f"Failed to load embedding model: {net_err}. "
+                        f"Falling back to paragraph-based chunking. "
+                        f"To fix: run 'python3 -c \"from sentence_transformers import "
+                        f"SentenceTransformer; SentenceTransformer(\\'all-MiniLM-L6-v2\\')\"' "
+                        f"while online to cache the model."
+                    )
+                    self.embedder = None
         else:
             self.embedder = None
             logger.warning("Semantic features disabled (sentence-transformers not available)")

@@ -5,6 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.0.2] - 2026-02-08
+
+### Fixed
+
+#### Bare Exception Handlers
+- **graph_builder.py**: `get_top_concepts()` bare `except:` replaced with `except Exception as e:` with proper logging and fallback message
+- **mcp/server.py**: `handle_get_graph_statistics()` bare `except:` in PageRank section replaced with `except Exception as e:` with warning log
+
+#### Chunk Serialization in Batch Processing
+- **mcp/server.py**: `handle_batch_process_pdfs()` now correctly calls `chunker.chunk_document(text, source_file, page_mapping)` with proper arguments and serializes chunks via `[c.to_dict() for c in chunks]` instead of passing raw objects
+- **mcp/server.py**: `handle_create_semantic_chunks()` now correctly calls `chunker.chunk_document(text=..., source_file=..., page_mapping=...)` with proper arguments and serializes via `.to_dict()`
+
+### Improved
+
+#### Semantic Chunker - Local Model Caching
+- **semantic_chunker.py**: Embedding model initialization now prefers local HuggingFace cache (`HF_HUB_OFFLINE=1`) before attempting network download, avoiding SSL failures in restricted environments
+- Provides actionable fix suggestion if both cache and network loading fail
+
+#### Configurable Semantic Thresholds in Topic Profiles
+- Semantic chunker thresholds (`similarity_threshold`, `topic_shift_threshold`, `dbscan_eps`) are now configurable per topic profile via `config/topic_profiles.yaml`
+
+### Added
+
+#### graph_viz_smart Fallback Import
+- **mcp/server.py**: Now attempts to import `SmartGraphVisualizer` from `graph_viz_smart` first, falling back to `UltraFastGraphVisualizer` from `graph_viz` if not available
+- Matches main pipeline import pattern for forward compatibility
+
+**Files changed:**
+- `src/knowledge_extraction/mcp/server.py`
+- `src/knowledge_extraction/core/graph_builder.py`
+- `src/knowledge_extraction/core/semantic_chunker.py`
+
+---
+
 ## [4.0.1] - 2026-01-26
 
 ### 🐛 Bug Fixes

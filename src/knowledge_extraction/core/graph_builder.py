@@ -171,8 +171,9 @@ class GraphBuilder:
             centrality = nx.pagerank(self.graph)
             top = sorted(centrality.items(), key=lambda x: x[1], reverse=True)[:n]
             return top
-        except:
-            # Fallback to degree centrality
+        except Exception as e:
+            # Fallback to degree centrality (e.g. when graph has no edges)
+            logger.warning(f"PageRank failed, falling back to degree centrality: {e}")
             centrality = nx.degree_centrality(self.graph)
             top = sorted(centrality.items(), key=lambda x: x[1], reverse=True)[:n]
             return top

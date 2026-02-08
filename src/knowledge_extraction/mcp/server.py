@@ -60,7 +60,12 @@ from semantic_chunker import SemanticChunker
 # Import for new tools
 sys.path.insert(0, str(modules_dir / 'visualization'))
 sys.path.insert(0, str(modules_dir.parent / 'scripts' / 'workflows'))
-from graph_viz import UltraFastGraphVisualizer
+try:
+    from graph_viz_smart import SmartGraphVisualizer as UltraFastGraphVisualizer
+    logger.info("Using SmartGraphVisualizer (graph_viz_smart.py)")
+except ImportError:
+    from graph_viz import UltraFastGraphVisualizer
+    logger.warning("graph_viz_smart not found, falling back to graph_viz")
 
 
 # =========================================================================
@@ -1092,8 +1097,12 @@ async def handle_create_semantic_chunks(args: Dict[str, Any]) -> List[TextConten
         doc_data = json.load(f)
 
     # Create chunks
-    chunker = SemanticChunker(target_chunk_size=chunk_size)
-    chunks = chunker.chunk_document(doc_data)
+    chunker = SemanticChunker(target_chunk_size=chunk_size, min_chunk_size=overlap)
+    chunks = chunker.chunk_document(
+        text=doc_data['text'],
+        source_file=doc_data.get('source_file', 'unknown'),
+        page_mapping=doc_data.get('page_mapping')
+    )
 
     # Save chunks
     chunks_data = {
@@ -1101,7 +1110,7 @@ async def handle_create_semantic_chunks(args: Dict[str, Any]) -> List[TextConten
         'total_chunks': len(chunks),
         'chunk_size': chunk_size,
         'overlap': overlap,
-        'chunks': chunks
+        'chunks': [c.to_dict() for c in chunks]
     }
 
     with open(output_file, 'w', encoding='utf-8') as f:
@@ -1282,14 +1291,18 @@ async def handle_batch_process_pdfs(args: Dict[str, Any]) -> List[TextContent]:
 
             # Create chunks
             chunker = SemanticChunker(target_chunk_size=1000)
-            chunks = chunker.chunk_document(doc_data)
+            chunks = chunker.chunk_document(
+                doc_data['text'],
+                doc_data['metadata']['source_file'],
+                doc_data.get('page_mapping')
+            )
 
             # Save chunks
             chunks_file = pdf_output_dir / 'chunks.json'
             chunks_data = {
                 'source_file': doc_data.get('source_file', pdf_file.name),
                 'total_chunks': len(chunks),
-                'chunks': chunks
+                'chunks': [c.to_dict() for c in chunks]
             }
             with open(chunks_file, 'w', encoding='utf-8') as f:
                 json.dump(chunks_data, f, indent=2)
@@ -1507,8 +1520,9 @@ async def handle_get_graph_statistics(args: Dict[str, Any]) -> List[TextContent]
             result_text += f"\nTop 10 by PageRank Centrality:\n"
             for i, (node, score) in enumerate(top_central, 1):
                 result_text += f"  {i:2d}. {node}: {score:.4f}\n"
-        except:
-            pass
+        except Exception as e:
+            logger.warning(f"PageRank calculation failed: {e}")
+            result_text += f"\nPageRank: Could not compute (graph may have no edges)\n"
 
         return [TextContent(type="text", text=result_text)]
 
