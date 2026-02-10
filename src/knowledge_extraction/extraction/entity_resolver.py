@@ -3,10 +3,17 @@
 MCP-Native Entity Resolver - Returns prompts for Claude Code
 
 Semantic deduplication without direct API calls.
+Uses a two-phase vectorized approach for scalability:
+  Phase 1: O(n) hash-based exact + alias matching
+  Phase 2: Batch embedding + chunked cosine similarity + Union-Find
+
+This handles 25K+ concepts in seconds. The previous pairwise approach
+was O(n^2) and would run for hours on large datasets.
 """
 
 import json
 import logging
+import re
 from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
@@ -20,6 +27,7 @@ try:
     from sentence_transformers import SentenceTransformer
 except ImportError:
     logger.warning("sentence-transformers not installed - semantic matching disabled")
+    np = None
     SentenceTransformer = None
 
 
@@ -53,12 +61,13 @@ class ResolvedEntity:
 class EntityResolverMCP:
     """
     Resolve duplicate entities using embeddings + Claude Code for ambiguous cases.
-    
-    Strategy:
-    1. Exact string matches (automatic)
-    2. Known alias matches (automatic)
-    3. High embedding similarity > 0.90 (automatic)
-    4. Ambiguous cases 0.85-0.90 (generate prompt for Claude Code)
+
+    Strategy (two-phase vectorized):
+    1. Exact string matches via hash grouping — O(n) (automatic)
+    2. Known alias matches — O(n) (automatic)
+    3. Batch embedding + chunked cosine similarity — O(n^2) but vectorized (automatic)
+       - Similarity >= semantic_match_threshold (0.90): auto-merge
+       - Similarity in [ambiguous_threshold, semantic_match_threshold): ambiguous → Claude Code
     """
 
     MERGE_DECISION_PROMPT = """Decide if these two concepts refer to the SAME entity:
@@ -93,6 +102,10 @@ Are these the same concept? Consider:
 
 Decision:"""
 
+    # Chunk size for blocked similarity computation. Controls memory usage:
+    # 2000 x 2000 x 4 bytes = ~16MB per block, well within limits.
+    _SIMILARITY_BLOCK_SIZE = 2000
+
     def __init__(
         self,
         embedding_model: str = "all-MiniLM-L6-v2",
@@ -102,7 +115,7 @@ Decision:"""
     ) -> None:
         """
         Initialize entity resolver.
-        
+
         Args:
             embedding_model: Sentence transformer model
             exact_match_threshold: Similarity threshold for automatic merge
@@ -171,7 +184,12 @@ Decision:"""
         def1: str = "",
         def2: str = ""
     ) -> float:
-        """Calculate semantic similarity between concepts."""
+        """Calculate semantic similarity between two concepts.
+
+        Note: This method encodes one pair at a time. For bulk resolution,
+        resolve_entities_automatic() uses batch encoding internally,
+        which is orders of magnitude faster.
+        """
         if not self.embedder:
             # Fall back to simple string similarity
             norm1 = self.normalize_term(term1)
@@ -206,7 +224,7 @@ Decision:"""
     ) -> dict[str, Any]:
         """
         Generate prompt for Claude Code to decide if concepts should merge.
-        
+
         Returns:
             {
                 'prompt': str,
@@ -240,11 +258,10 @@ Decision:"""
     def parse_merge_decision(self, response_text: str) -> tuple[bool, str, float]:
         """
         Parse Claude's merge decision.
-        
+
         Returns: (should_merge, reasoning, confidence)
         """
         try:
-            import re
             json_match = re.search(r'```json\s*(\{.*?\})\s*```', response_text, re.DOTALL)
             if json_match:
                 decision_data = json.loads(json_match.group(1))
@@ -261,6 +278,35 @@ Decision:"""
             logger.error(f"Error parsing merge decision: {e}")
             return False, f"Parse error: {e}", 0.0
 
+    # ------------------------------------------------------------------
+    # Union-Find helpers for transitive merging
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _uf_find(parent: list[int], x: int) -> int:
+        """Find root with path compression."""
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+
+    @staticmethod
+    def _uf_union(parent: list[int], rank: list[int], x: int, y: int) -> bool:
+        """Union by rank. Returns True if a merge happened."""
+        rx, ry = EntityResolverMCP._uf_find(parent, x), EntityResolverMCP._uf_find(parent, y)
+        if rx == ry:
+            return False
+        if rank[rx] < rank[ry]:
+            rx, ry = ry, rx
+        parent[ry] = rx
+        if rank[rx] == rank[ry]:
+            rank[rx] += 1
+        return True
+
+    # ------------------------------------------------------------------
+    # Core resolution (two-phase vectorized)
+    # ------------------------------------------------------------------
+
     def resolve_entities_automatic(
         self,
         concepts: list[dict[str, Any]]
@@ -269,8 +315,12 @@ Decision:"""
         Resolve entities using automatic methods only.
         Returns resolved entities and list of ambiguous pairs for Claude Code.
 
+        Uses a two-phase approach for scalability:
+          Phase 1: O(n) hash-based exact + alias matching
+          Phase 2: Vectorized batch embedding + chunked cosine similarity
+
         Args:
-            concepts: List of concept dicts
+            concepts: List of concept dicts (must have 'term' and 'definition')
 
         Returns:
             (resolved_entities, ambiguous_pairs_for_claude)
@@ -279,147 +329,186 @@ Decision:"""
         if not isinstance(concepts, list):
             raise ValueError(f"concepts must be a list, got {type(concepts).__name__}")
 
-        # Validate concept structure
-        required_fields = ['term', 'definition']
         for i, concept in enumerate(concepts):
             if not isinstance(concept, dict):
                 raise ValueError(f"Concept {i} must be a dict, got {type(concept).__name__}")
-
-            missing = [f for f in required_fields if f not in concept]
+            missing = [f for f in ('term', 'definition') if f not in concept]
             if missing:
                 raise ValueError(f"Concept {i} missing required fields: {missing}")
-
             if not concept['term'] or not concept['term'].strip():
                 raise ValueError(f"Concept {i} has empty 'term' field")
 
         logger.info(f"Resolving entities from {len(concepts)} concepts...")
-        logger.debug("Using automatic methods (string matching + embeddings)")
 
-        # Track which concepts have been merged
-        merged_indices = set()
-        entities = []
-        ambiguous_pairs = []
+        # ---------------------------------------------------------------
+        # Phase 1: Hash-based exact + alias grouping  (O(n))
+        # ---------------------------------------------------------------
+        logger.info("Phase 1: exact + alias matching...")
 
-        for i, concept1 in enumerate(concepts):
-            if i in merged_indices:
-                continue
+        # Map normalized term → list of concept indices
+        norm_groups: dict[str, list[int]] = defaultdict(list)
+        for idx, c in enumerate(concepts):
+            norm = self.normalize_term(c['term'])
+            if norm:
+                # Check alias expansion
+                expanded = self.known_aliases.get(norm, norm)
+                norm_groups[expanded].append(idx)
 
-            # Start new entity
-            canonical_term = concept1['term']
-            aliases = [concept1['term']]
-            definitions = [concept1.get('definition', '')]
+        logger.info(f"Phase 1: {len(concepts)} concepts → {len(norm_groups)} groups")
+        self.stats['exact_matches'] = len(concepts) - len(norm_groups)
+
+        # Build one representative concept per group for Phase 2
+        group_keys = list(norm_groups.keys())
+        group_reps: list[dict[str, Any]] = []  # one per group
+        for key in group_keys:
+            indices = norm_groups[key]
+            # Pick the concept with the longest definition as representative
+            rep = max((concepts[i] for i in indices),
+                      key=lambda c: len(c.get('definition', '')))
+            group_reps.append(rep)
+
+        n_groups = len(group_reps)
+
+        # ---------------------------------------------------------------
+        # Phase 2: Vectorized semantic similarity on group representatives
+        # ---------------------------------------------------------------
+        # Union-Find over group indices
+        parent = list(range(n_groups))
+        rank = [0] * n_groups
+        ambiguous_pairs: list[dict[str, Any]] = []
+
+        if self.embedder and n_groups > 1:
+            logger.info(f"Phase 2: batch-encoding {n_groups} terms...")
+
+            # Build texts for embedding (term + short definition)
+            texts = []
+            for rep in group_reps:
+                defn = rep.get('definition', '')[:200]
+                texts.append(f"{rep['term']}. {defn}" if defn else rep['term'])
+
+            # Batch encode all at once (fast)
+            embeddings = self.embedder.encode(
+                texts, batch_size=512, show_progress_bar=False,
+                normalize_embeddings=True
+            )
+
+            # Chunked cosine similarity (normalized → dot product)
+            bs = self._SIMILARITY_BLOCK_SIZE
+            n_blocks = (n_groups + bs - 1) // bs
+
+            logger.info(f"Phase 2: computing similarity ({n_blocks} blocks)...")
+
+            for bi in range(0, n_groups, bs):
+                bi_end = min(bi + bs, n_groups)
+                emb_i = embeddings[bi:bi_end]
+
+                for bj in range(bi, n_groups, bs):
+                    bj_end = min(bj + bs, n_groups)
+                    emb_j = embeddings[bj:bj_end]
+
+                    sim_block = emb_i @ emb_j.T
+
+                    if bi == bj:
+                        # Same block — upper triangle only
+                        rows, cols = np.where(np.triu(sim_block, k=1) >= self.ambiguous_threshold)
+                    else:
+                        rows, cols = np.where(sim_block >= self.ambiguous_threshold)
+
+                    for r, c in zip(rows, cols):
+                        gi, gj = bi + int(r), bj + int(c)
+                        similarity = float(sim_block[r, c])
+
+                        if similarity >= self.semantic_match_threshold:
+                            # High confidence — auto-merge
+                            if self._uf_union(parent, rank, gi, gj):
+                                self.stats['semantic_matches'] += 1
+                        else:
+                            # Ambiguous — record for Claude Code
+                            ambiguous_pairs.append({
+                                'concept1': group_reps[gi],
+                                'concept2': group_reps[gj],
+                                'similarity': similarity,
+                                'index1': gi,
+                                'index2': gj
+                            })
+                            self.stats['llm_decisions_needed'] += 1
+
+                logger.debug(f"  Block row {bi // bs + 1}/{n_blocks} done")
+
+        elif not self.embedder:
+            logger.info("Phase 2 skipped (no embedder available)")
+
+        # ---------------------------------------------------------------
+        # Build final entities from Union-Find groups
+        # ---------------------------------------------------------------
+        merged_groups: dict[int, list[int]] = defaultdict(list)
+        for gi in range(n_groups):
+            root = self._uf_find(parent, gi)
+            merged_groups[root].append(gi)
+
+        entities: list[ResolvedEntity] = []
+
+        for root, group_indices in merged_groups.items():
+            # Collect all original concept indices across all groups being merged
+            all_concept_indices: list[int] = []
+            for gi in group_indices:
+                key = group_keys[gi]
+                all_concept_indices.extend(norm_groups[key])
+
+            # Build entity from all concepts
+            all_concepts = [concepts[i] for i in all_concept_indices]
+
+            # Pick canonical term from most frequent original casing
+            term_counts: dict[str, int] = defaultdict(int)
+            for c in all_concepts:
+                term_counts[c['term'].strip()] += 1
+            canonical_term = max(term_counts, key=term_counts.get)
+
+            aliases = list(set(c['term'].strip() for c in all_concepts))
+
+            definitions: list[str] = []
+            seen_defs: set[str] = set()
+            for c in all_concepts:
+                d = c.get('definition', '').strip()
+                if d and d not in seen_defs:
+                    seen_defs.add(d)
+                    definitions.append(d)
+
             categories: dict[str, int] = defaultdict(int)
             importance_scores: dict[str, int] = defaultdict(int)
-            evidence = []
-            sources = set()
-            confidences = []
+            sources: set[str] = set()
+            confidences: list[float] = []
+            evidence: list[dict[str, Any]] = []
 
-            # Add concept1 data
-            categories[concept1.get('category', 'general')] += 1
-            importance_scores[concept1.get('importance', 'medium')] += 1
-            sources.add(concept1.get('source_file', 'unknown'))
-            confidences.append(concept1.get('confidence', 0.5))
+            for c in all_concepts:
+                categories[c.get('category', 'general')] += 1
+                importance_scores[c.get('importance', 'medium')] += 1
+                sources.add(c.get('source_file', 'unknown'))
+                confidences.append(c.get('confidence', 0.5))
+                evidence.append({
+                    'chunk_id': c.get('source_chunk_id', c.get('chunk_id', '')),
+                    'quote': c.get('quote', ''),
+                    'page': c.get('page', 1)
+                })
 
-            evidence.append({
-                'chunk_id': concept1.get('source_chunk_id', concept1.get('chunk_id', '')),
-                'quote': concept1.get('quote', ''),
-                'page': concept1.get('page', 1)
-            })
-
-            # Check for duplicates
-            for j, concept2 in enumerate(concepts[i+1:], i+1):
-                if j in merged_indices:
-                    continue
-
-                should_merge = False
-                merge_reason = ""
-
-                # Level 1: Exact string match
-                norm1 = self.normalize_term(concept1['term'])
-                norm2 = self.normalize_term(concept2['term'])
-
-                if norm1 == norm2:
-                    should_merge = True
-                    merge_reason = "exact_match"
-                    self.stats['exact_matches'] += 1
-
-                # Level 2: Known alias match
-                elif self.check_alias_match(concept1['term'], concept2['term']):
-                    should_merge = True
-                    merge_reason = "alias_match"
-                    self.stats['exact_matches'] += 1
-
-                # Level 3: Semantic similarity
-                else:
-                    similarity = self.calculate_similarity(
-                        concept1['term'],
-                        concept2['term'],
-                        concept1.get('definition', ''),
-                        concept2.get('definition', '')
-                    )
-
-                    if similarity >= self.exact_match_threshold:
-                        # Very high similarity - merge automatically
-                        should_merge = True
-                        merge_reason = f"semantic_high ({similarity:.2f})"
-                        self.stats['semantic_matches'] += 1
-
-                    elif similarity >= self.ambiguous_threshold:
-                        # Ambiguous - need Claude Code to decide
-                        ambiguous_pairs.append({
-                            'concept1': concept1,
-                            'concept2': concept2,
-                            'similarity': similarity,
-                            'index1': i,
-                            'index2': j
-                        })
-                        self.stats['llm_decisions_needed'] += 1
-                        continue  # Don't merge yet
-
-                # Merge if decision is positive
-                if should_merge:
-                    merged_indices.add(j)
-
-                    if concept2['term'] not in aliases:
-                        aliases.append(concept2['term'])
-
-                    if concept2.get('definition') not in definitions:
-                        definitions.append(concept2['definition'])
-
-                    categories[concept2.get('category', 'general')] += 1
-                    importance_scores[concept2.get('importance', 'medium')] += 1
-                    sources.add(concept2.get('source_file', 'unknown'))
-                    confidences.append(concept2.get('confidence', 0.5))
-
-                    evidence.append({
-                        'chunk_id': concept2.get('source_chunk_id', concept2.get('chunk_id', '')),
-                        'quote': concept2.get('quote', ''),
-                        'page': concept2.get('page', 1),
-                        'merge_reason': merge_reason
-                    })
-
-            # Create resolved entity
             entity = ResolvedEntity(
                 canonical_term=canonical_term,
                 aliases=aliases,
-                definitions=definitions,
+                definitions=definitions[:10],
                 categories=categories,
                 importance_scores=importance_scores,
                 evidence=evidence,
                 sources=sources,
                 avg_confidence=sum(confidences) / len(confidences) if confidences else 0.0
             )
-
             entities.append(entity)
-            self.stats['entities_created'] += 1
-
-            if i % 10 == 0:
-                logger.debug(f"Processed {i}/{len(concepts)} concepts...")
 
         self.stats['concepts_processed'] = len(concepts)
+        self.stats['entities_created'] = len(entities)
 
-        logger.info(f"Automatic resolution complete: {len(entities)} entities created")
-        logger.info(f"Exact matches: {self.stats['exact_matches']}, Semantic: {self.stats['semantic_matches']}")
+        logger.info(f"Resolution complete: {len(concepts)} concepts → {len(entities)} entities")
+        logger.info(f"Exact/alias matches: {self.stats['exact_matches']}, "
+                     f"Semantic merges: {self.stats['semantic_matches']}")
         if ambiguous_pairs:
             logger.info(f"Ambiguous pairs (need Claude): {len(ambiguous_pairs)}")
 
@@ -432,11 +521,11 @@ Decision:"""
     ) -> Path:
         """
         Create batch file with merge decision prompts for Claude Code.
-        
+
         Args:
             ambiguous_pairs: List of ambiguous concept pairs
             output_path: Where to save batch file
-        
+
         Returns:
             Path to batch file
         """

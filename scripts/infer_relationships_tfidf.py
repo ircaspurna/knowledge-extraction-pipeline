@@ -2,8 +2,33 @@
 """
 Lightweight Relationship Inferencer (TF-IDF based)
 
-No external dependencies beyond standard library + sklearn (usually pre-installed).
-Infers relationships based on definition text similarity.
+IMPORTANT: This is an OFFLINE FALLBACK for relationship inference, not the primary
+approach. Use this only when:
+  - You don't have access to Claude/LLM API for co-occurrence relationship extraction
+  - You need a quick, dependency-free approximation of relationships
+  - You're working offline or want a zero-cost baseline
+
+Primary approach (preferred):
+  1. Use the MCP tool `create_relationship_batch` to find co-occurring entity pairs
+     in chunks and generate classification prompts for Claude
+  2. Have Claude classify relationship types with context from the source text
+  3. Use `parse_relationship_responses` to extract structured relationships
+  4. Build graph with `build_knowledge_graph` which creates co-occurrence edges
+
+This script instead:
+  - Computes TF-IDF vectors from entity definitions/terms
+  - Uses cosine similarity to find related pairs (O(n^2) pairwise comparison)
+  - Infers relationship types from category pairs using hardcoded rules
+  - Works entirely offline with no API calls
+
+Limitations vs Claude-based approach:
+  - No understanding of semantic context or nuance
+  - Relationship types are guessed from categories, not from source text
+  - TF-IDF similarity conflates lexical overlap with conceptual relatedness
+  - O(n^2) pairwise comparison; slow for large graphs (1000+ nodes)
+  - Cannot detect causal, contradictory, or hierarchical relationships reliably
+
+Dependencies: standard library only (no sklearn, no sentence-transformers).
 """
 
 import json
@@ -303,7 +328,11 @@ def ensure_connectivity(
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Infer relationships using TF-IDF similarity')
+    parser = argparse.ArgumentParser(
+        description='Offline fallback: infer relationships using TF-IDF similarity. '
+                    'For best results, use Claude-based co-occurrence extraction instead '
+                    '(create_relationship_batch + parse_relationship_responses).'
+    )
     parser.add_argument('input_json', type=Path, help='Input knowledge_graph.json')
     parser.add_argument('--output', '-o', type=Path, help='Output JSON path')
     parser.add_argument('--threshold', '-t', type=float, default=0.3,
@@ -323,7 +352,9 @@ def main():
         args.output = args.input_json.parent / 'knowledge_graph_enriched.json'
     
     print("=" * 60)
-    print("🧠 TF-IDF RELATIONSHIP INFERENCER")
+    print("TF-IDF RELATIONSHIP INFERENCER (offline fallback)")
+    print("Note: For best results, use Claude-based co-occurrence")
+    print("      extraction via create_relationship_batch instead.")
     print("=" * 60)
     
     # Load graph
