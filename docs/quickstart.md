@@ -63,4 +63,5 @@ Then open Neo4j Browser at http://localhost:7474
 
 - Read the [User Guide](user_guide/) for detailed workflows
 - Check [Examples](../examples/) for working code
-- See [API Reference](api_reference/) for module documentation
+- See [WORKFLOW.md](WORKFLOW.md) for the full pipeline workflow guide
+- See `src/knowledge_extraction/` for module-level docstrings (canonical source of API documentation)

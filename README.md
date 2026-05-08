@@ -201,9 +201,10 @@ python scripts/process_pdf.py paper.pdf --output ./output/
 # "Process the extraction prompts in ./output/extraction_batch.json
 #  and save responses to ./output/extraction_responses.json"
 
-# 3. Parse responses (automated)
-python scripts/parse_responses.py ./output/extraction_responses.json
-# Creates: entities.json with extracted concepts
+# 3. Parse responses (via MCP tool from Claude Code)
+# In Claude Code chat, say:
+# "Use parse_extraction_responses on ./output/extraction_responses.json"
+# Creates: concepts.json with extracted concepts (then run entity resolution to get entities.json)
 ```
 
 **Why this approach?**
@@ -276,9 +277,9 @@ If you use this pipeline in your research, please cite:
 @software{knowledge_extraction_pipeline,
   author = {Spurna, Irena},
   title = {Knowledge Extraction Pipeline: MCP-Based Academic Knowledge Graph Construction},
-  year = {2025},
+  year = {2026},
   url = {https://github.com/ircaspurna/knowledge-extraction-pipeline},
-  version = {3.0.0}
+  version = {4.0.2}
 }
 ```
 

@@ -1,7 +1,7 @@
 # Knowledge Extraction Pipeline - Complete Workflow Guide
 
-**Version:** 3.1 (100% MCP-Native)
-**Last Updated:** 2026-01-12
+**Version:** 4.0.2 (matches `pyproject.toml`)
+**Last Updated:** 2026-05-08
 **Status:** ✅ Production Ready
 
 ---
@@ -406,11 +406,7 @@ if empty > 0:
    - Verify output has non-empty `chunk_id` fields
 
 3. **Emergency repair (for already-broken data):**
-   ```python
-   # Use repair tool to match quotes back to chunks
-   from Pipeline import chunk_id_repair
-   chunk_id_repair.repair('output_directory/')
-   ```
+   See `tests/test_integration/test_chunk_id_preservation.py` for the canonical chunk-id integrity invariants. The test demonstrates the preservation contract; if you need a repair routine, build it on top of the same matching logic (quote → chunk lookup) used in `parse_extraction_responses`.
 
 **Prevention:**
 - ALWAYS use complete MCP workflow (never skip steps)
@@ -465,8 +461,8 @@ See [Critical Warning](#️-critical-preventing-data-loss) above.
 ### Documentation
 
 - **This file (WORKFLOW.md):** Complete workflows
-- **MCP_TOOLS_REFERENCE.md:** Detailed tool documentation
-- **START_HERE.md:** Quick orientation
+- **`docs/quickstart.md`:** Quick orientation
+- **MCP tool reference:** Tool definitions and docstrings live in `src/knowledge_extraction/mcp/server.py` (each `@mcp.tool()` decorator is a documented tool)
 
 ### Common Questions
 
@@ -515,10 +511,8 @@ After processing:
 
 **🎉 You now have a complete, professional knowledge extraction system!**
 
-**Questions?** See MCP_TOOLS_REFERENCE.md for detailed tool documentation.
+**Questions?** See `src/knowledge_extraction/mcp/server.py` for MCP tool definitions and docstrings, or `docs/quickstart.md` for getting-started orientation.
 
 ---
 
-**Last Updated:** 2025-12-01
-**Pipeline Version:** 3.0 (Complete)
-**Tools:** 14 (100% MCP coverage)
+*See header for version and last-updated metadata.*

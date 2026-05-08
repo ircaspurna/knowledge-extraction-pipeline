@@ -4,8 +4,8 @@ authors:
   - family-names: Spurna
     given-names: Irena
 title: "Knowledge Extraction Pipeline"
-version: 2.2.0
-date-released: 2025-11-23
+version: 4.0.2
+date-released: 2026-02-08
 url: "https://github.com/ircaspurna/knowledge-extraction-pipeline"
 license: MIT
 keywords:
