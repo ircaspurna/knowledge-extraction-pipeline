@@ -213,9 +213,19 @@ class DocumentProcessor:
                 # Add spacing between pages
                 if page_num < len(reader.pages):
                     text += "\n\n"
+                page_end = len(text)
+                # Only record entries for non-empty pages — otherwise empty pages
+                # collide on the same page_start key and overwrite each other,
+                # causing downstream chunks to be tagged with the last empty page
+                page_mapping[page_start] = (page_num, page_start, page_end)
 
-            page_end = len(text)
-            page_mapping[page_start] = (page_num, page_start, page_end)
+        empty_count = len(reader.pages) - len(page_mapping)
+        if empty_count and empty_count / len(reader.pages) > 0.2:
+            logger.warning(
+                f"{file_path.name}: {empty_count}/{len(reader.pages)} pages extracted "
+                f"empty via pypdf ({100*empty_count/len(reader.pages):.0f}%). "
+                f"Page citations for this document may be approximate."
+            )
 
         self.stats['files_processed'] += 1
         self.stats['total_pages'] += len(reader.pages)
@@ -261,9 +271,18 @@ class DocumentProcessor:
                     text += page_text
                     if page_num < len(pdf.pages):
                         text += "\n\n"
+                    page_end = len(text)
+                    # Only record entries for non-empty pages (see pypdf branch
+                    # for rationale)
+                    page_mapping[page_start] = (page_num, page_start, page_end)
 
-                page_end = len(text)
-                page_mapping[page_start] = (page_num, page_start, page_end)
+            empty_count = len(pdf.pages) - len(page_mapping)
+            if empty_count and empty_count / len(pdf.pages) > 0.2:
+                logger.warning(
+                    f"{file_path.name}: {empty_count}/{len(pdf.pages)} pages extracted "
+                    f"empty via pdfplumber ({100*empty_count/len(pdf.pages):.0f}%). "
+                    f"Page citations for this document may be approximate."
+                )
 
             self.stats['files_processed'] += 1
             self.stats['total_pages'] += len(pdf.pages)
@@ -312,9 +331,18 @@ class DocumentProcessor:
                 text += page_text
                 if page_num < len(doc) - 1:
                     text += "\n\n"
+                page_end = len(text)
+                # Only record entries for non-empty pages (see pypdf branch
+                # for rationale)
+                page_mapping[page_start] = (page_num + 1, page_start, page_end)
 
-            page_end = len(text)
-            page_mapping[page_start] = (page_num + 1, page_start, page_end)
+        empty_count = len(doc) - len(page_mapping)
+        if empty_count and empty_count / len(doc) > 0.2:
+            logger.warning(
+                f"{file_path.name}: {empty_count}/{len(doc)} pages extracted "
+                f"empty via PyMuPDF ({100*empty_count/len(doc):.0f}%). "
+                f"Page citations for this document may be approximate."
+            )
 
         doc.close()
 

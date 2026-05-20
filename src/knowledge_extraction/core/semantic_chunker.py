@@ -274,7 +274,7 @@ class SemanticChunker:
 
         for i, match in enumerate(matches):
             section_title = match.group(1).strip('# ').strip()
-            section_start = match.end()
+            section_start = match.end()  # position AFTER the header
 
             # Find next section or end of text
             if i + 1 < len(matches):
@@ -282,8 +282,14 @@ class SemanticChunker:
             else:
                 section_end = len(text)
 
-            section_text = text[section_start:section_end].strip()
-            sections.append((section_title, section_text, match.start()))
+            # Compute the actual position in original text where the (stripped)
+            # section_text begins, so callers can correctly map chunk offsets
+            # back to the original document. Previously we stored match.start()
+            # which is off by the header length + any leading whitespace.
+            raw_section = text[section_start:section_end]
+            leading_ws = len(raw_section) - len(raw_section.lstrip())
+            section_text = raw_section.strip()
+            sections.append((section_title, section_text, section_start + leading_ws))
 
         return sections
 
@@ -569,16 +575,24 @@ class SemanticChunker:
         all_chunks = []
 
         for section_title, section_text, section_start in sections:
-            # Use semantic splitting if available
+            # Use semantic splitting if available.
+            # Contract: split_at_semantic_boundaries returns ABSOLUTE positions
+            # (it adds the passed char_start internally), while
+            # split_into_paragraphs returns RELATIVE positions. Account for the
+            # difference here so we don't double-add section_start in the
+            # semantic branch (which previously drifted chunk positions by ~2×
+            # across long documents and pushed late chunks past page_mapping's
+            # last entry, causing the chunker's lookup to fall back to the
+            # document's max page number).
             if self.embedder:
                 section_chunks = self.split_at_semantic_boundaries(section_text, section_start)
+                for chunk_text, abs_chunk_start in section_chunks:
+                    all_chunks.append((chunk_text, abs_chunk_start, section_title))
             else:
                 # Fallback to paragraph-based
                 section_chunks = self.split_into_paragraphs(section_text)
-
-            # Add section info
-            for chunk_text, chunk_start in section_chunks:
-                all_chunks.append((chunk_text, section_start + chunk_start, section_title))
+                for chunk_text, rel_chunk_start in section_chunks:
+                    all_chunks.append((chunk_text, section_start + rel_chunk_start, section_title))
 
         # Merge small chunks if semantically similar
         all_chunks = self.merge_small_chunks(all_chunks)

@@ -144,6 +144,74 @@ def test_semantic_batching_integration():
     return True
 
 
+def test_chunk_positions_stay_within_text():
+    """Regression (v4.0.3): chunk char_start must never exceed document length.
+
+    Earlier versions double-added section_start in chunk_document when the
+    semantic-boundary splitter was active (the default whenever sentence-
+    transformers is available). Chunk positions drifted upward, pushing late
+    chunks past every page_mapping entry — so the chunker's "last position <=
+    char_start" lookup fell through and assigned the document's max page
+    number to ~half the chunks. Guards against that pathology returning.
+    """
+    print("\n📐 Testing Chunk Position Drift (v4.0.3 regression)...")
+
+    # Build a long multi-section document so section_start accumulates.
+    # Headers match the section pattern in extract_sections.
+    sections = []
+    for i in range(20):
+        sections.append(f"## Section {i+1}\n\n")
+        sections.append(
+            "Lorem ipsum dolor sit amet, consectetur adipiscing elit. "
+            "Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. "
+            * 8
+        )
+        sections.append("\n\n")
+    text = "".join(sections)
+
+    # Build a valid page_mapping that covers the whole text (20 pretend pages).
+    page_size = len(text) // 20
+    page_mapping = {
+        i * page_size: (i + 1, i * page_size, (i + 1) * page_size)
+        for i in range(20)
+    }
+
+    chunker = SemanticChunker(
+        target_chunk_size=100,
+        min_chunk_size=30,
+        max_chunk_size=300,
+    )
+    chunks = chunker.chunk_document(
+        text=text,
+        source_file="multisection.pdf",
+        page_mapping=page_mapping,
+    )
+
+    assert chunks, "Should produce at least one chunk"
+    text_len = len(text)
+    for c in chunks:
+        assert 0 <= c.char_start < text_len, (
+            f"chunk {c.chunk_id} has char_start={c.char_start} "
+            f"outside [0, {text_len})"
+        )
+
+    # Stronger invariant: no single page should capture >50% of chunks.
+    # If the bug were back, chunks would all pile at the max page (20).
+    from collections import Counter
+    page_counts = Counter(c.page for c in chunks)
+    dominant_page, dominant_count = page_counts.most_common(1)[0]
+    assert dominant_count / len(chunks) < 0.5, (
+        f"page {dominant_page} got {dominant_count}/{len(chunks)} chunks "
+        f"({100*dominant_count/len(chunks):.0f}%) — likely double-add regression"
+    )
+
+    print(f"  ✓ All {len(chunks)} chunk char_starts within [0, {text_len})")
+    print(f"  ✓ Page distribution healthy "
+          f"(top page {dominant_page}: {dominant_count} chunks, "
+          f"{100*dominant_count/len(chunks):.0f}%)")
+    return True
+
+
 def main():
     """Run all v4.0 enhancement tests"""
     print("\n" + "="*70)
@@ -154,6 +222,7 @@ def main():
         ("Semantic Batching", test_semantic_batching),
         ("Progress Monitoring", test_progress_monitoring),
         ("Semantic Batching Integration", test_semantic_batching_integration),
+        ("Chunk Position Drift (v4.0.3 regression)", test_chunk_positions_stay_within_text),
     ]
 
     results = {}

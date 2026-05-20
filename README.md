@@ -279,7 +279,7 @@ If you use this pipeline in your research, please cite:
   title = {Knowledge Extraction Pipeline: MCP-Based Academic Knowledge Graph Construction},
   year = {2026},
   url = {https://github.com/ircaspurna/knowledge-extraction-pipeline},
-  version = {4.0.2}
+  version = {4.0.3}
 }
 ```
 

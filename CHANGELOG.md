@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.0.3] - 2026-05-20
+
+### Fixed
+
+#### Chunk Page Attribution — `char_start` Drift in Multi-Section Documents
+
+**Severity:** High — affected page metadata on every chunked document with detected section headers; books were impacted most heavily.
+
+**Problem:** In `SemanticChunker.chunk_document()`, when the `sentence-transformers` embedder was available (i.e., almost always), `char_start` positions for chunks drifted upward by approximately the cumulative `section_start` offset of every preceding section. Late chunks in long multi-section documents ended up with `char_start` values *past the end of the source text*, so the chunker's "last position ≤ `char_start` wins" page lookup fell through to the document's maximum page number. Empirically: ~46% of chunks in a 503-page book were tagged with `page=503` (the last page).
+
+**Root cause:** Inconsistent contracts between the two splitting helpers. `split_at_semantic_boundaries(text, char_start)` returns chunks with **absolute** positions (it adds `char_start` internally), while `split_into_paragraphs(text)` returns **relative** positions. `chunk_document` previously called both as if they returned relative positions, so the semantic-boundary branch got `section_start` added *twice*. A smaller secondary issue: `extract_sections` stored `match.start()` (position of the section header) rather than the actual start of the (stripped) `section_text`, contributing a small per-section offset.
+
+**Fix:**
+- `semantic_chunker.py: chunk_document` — handle the two splitter contracts separately. The semantic-boundary branch trusts `chunk_start` as absolute; the paragraph branch adds `section_start` to its relative offsets.
+- `semantic_chunker.py: extract_sections` — the third tuple element is now the actual position where `section_text` begins (`match.end() + leading_whitespace`), not `match.start()`.
+
+#### Empty Pages Collide in `page_mapping`
+
+**Problem:** All three PDF processors (pypdf, pdfplumber, PyMuPDF) wrote `page_mapping[page_start]` unconditionally, including for pages that extracted as empty (image-only, OCR-failed, blank). Empty pages don't grow the `text` buffer, so consecutive empties produce identical `page_start` keys; the dict insertion overwrites earlier entries, leaving only the last (highest-numbered) empty page mapped at that position. This compounded with the chunker bug above.
+
+**Fix:** Each PDF backend now only writes a `page_mapping` entry for non-empty pages. A new `logger.warning` fires when >20% of pages extract empty (a signal that OCR or image-only content is degrading page-citation fidelity).
+
+**Files changed:**
+- `src/knowledge_extraction/core/semantic_chunker.py`
+- `src/knowledge_extraction/core/document_processor.py`
+- `tests/test_v4_enhancements.py` (regression test)
+
+**Validation on a 503-page book (Vrij 2008):** chunks-at-max-page dropped from 734 (46.5%) to 1 (0.1%). Chunk distribution across 100-page ranges is now uniform (~20% per bucket) instead of piling at the end.
+
+---
+
 ## [4.0.2] - 2026-02-08
 
 ### Fixed

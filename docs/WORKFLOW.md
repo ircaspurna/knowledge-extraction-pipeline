@@ -1,7 +1,7 @@
 # Knowledge Extraction Pipeline - Complete Workflow Guide
 
-**Version:** 4.0.2 (matches `pyproject.toml`)
-**Last Updated:** 2026-05-08
+**Version:** 4.0.3 (matches `pyproject.toml`)
+**Last Updated:** 2026-05-20
 **Status:** ✅ Production Ready
 
 ---
