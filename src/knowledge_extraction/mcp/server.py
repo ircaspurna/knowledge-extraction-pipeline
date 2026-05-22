@@ -812,11 +812,31 @@ async def handle_parse_extraction_responses(args: Dict[str, Any]) -> List[TextCo
             source_file = metadata.get('source_file', 'unknown')
             page = metadata.get('page', 0)
 
+            # If this response came from a batched prompt, pass the per-passage
+            # chunk_ids/pages arrays so the parser can attribute each concept
+            # to the correct source chunk via its passage_index field.
+            # Falls back gracefully to chunk_id/page when not present.
+            chunk_ids_list = metadata.get('chunk_ids')
+            pages_list = metadata.get('pages')
+            if not isinstance(chunk_ids_list, list) or not chunk_ids_list:
+                chunk_ids_list = None
+            if not isinstance(pages_list, list):
+                pages_list = None
+
+            # If chunk_id is missing but the batch metadata has chunk_ids,
+            # use the first one as the response-level fallback.
+            if not chunk_id and chunk_ids_list:
+                chunk_id = chunk_ids_list[0]
+            if not page and pages_list:
+                page = pages_list[0]
+
             concepts = extractor.parse_extraction_response(
                 response.get('response_text', ''),
                 chunk_id,
                 source_file,
-                page
+                page,
+                chunk_ids=chunk_ids_list,
+                pages=pages_list,
             )
             all_concepts.extend(concepts)
         except Exception as e:

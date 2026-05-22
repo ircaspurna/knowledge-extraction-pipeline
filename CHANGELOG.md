@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.0.4] - 2026-05-22
+
+### Fixed
+
+#### Per-Concept Provenance in Batched Extraction Prompts
+
+**Severity:** High — affected provenance accuracy of every concept extracted via semantic batching (the default cost-saving path).
+
+**Problem:** `create_batched_prompts()` bundles 4–6 chunks per prompt under headings `**Passage 1:**`, `**Passage 2:**`, etc. The LLM was never asked to tag each emitted concept with which Passage it came from. The parser, lacking that signal, defaulted every concept in a batched response to the first chunk in the batch (`chunk_ids[0]` / `pages[0]`). Concepts genuinely from Passage 3 of a 4-passage batch were silently attributed to Passage 1 — losing chunk-level provenance and skewing page citations downstream.
+
+Compounding the issue, batch metadata stored `pages` as a deduplicated set, so even if the LLM had emitted a passage index, the parser would have had no way to recover the per-passage page number.
+
+**Fix:**
+- `semantic_batch_optimizer.py: create_batched_prompts()`:
+  - Emit `pages` as a parallel list (same length and order as `chunk_ids`), not `list(set(...))`.
+  - Append an explicit per-concept attribution instruction to multi-chunk prompts: each emitted concept must include a `passage_index` integer (1..N) identifying which numbered Passage it came from.
+- `concept_extractor.py: parse_extraction_response()` — accept optional `chunk_ids` and `pages` parallel lists. When a concept carries `passage_index`, route its `chunk_id` and `page` via `chunk_ids[passage_index-1]` / `pages[passage_index-1]`. Fall back to the response-level `chunk_id`/`page` when `passage_index` is absent (legacy responses, single-chunk prompts).
+- `mcp/server.py: handle_parse_extraction_responses()` — pass the per-batch `chunk_ids` and `pages` lists from response metadata into the parser.
+
+**Backward compatibility:** existing `extraction_responses.json` files without `passage_index` continue to parse correctly via the fallback path. Single-chunk prompts (no batching) are unaffected.
+
+**Files changed:**
+- `src/knowledge_extraction/extraction/semantic_batch_optimizer.py`
+- `src/knowledge_extraction/extraction/concept_extractor.py`
+- `src/knowledge_extraction/mcp/server.py`
+- `tests/test_v4_enhancements.py` (regression test)
+
+**Migration:** existing `concepts.json` files built from batched extraction responses have inflated `chunk_id` / `page` attribution to the first chunk in each batch (typically ~75% of concepts in 4-chunk batches). Re-parse `extraction_responses.json` with the v4.0.4 parser to recover correct attribution — but only the concepts whose responses include `passage_index` will be re-routed; legacy responses continue to use the first-chunk fallback. For correct provenance on past batches, re-extract concepts through the patched prompt template.
+
+---
+
 ## [4.0.3] - 2026-05-20
 
 ### Fixed

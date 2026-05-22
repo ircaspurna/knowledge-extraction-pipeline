@@ -199,13 +199,18 @@ def create_batched_prompts(
             for i, chunk in enumerate(batch)
         ])
 
-        # Create metadata combining all chunk IDs
+        # Create metadata combining all chunk IDs.
+        # `pages` is intentionally a PARALLEL list (same length and order as
+        # chunk_ids), not a deduplicated set, so the parser can recover the
+        # per-concept page via passage_index. Previously this used set(...)
+        # which discarded the per-chunk page mapping and forced the parser to
+        # default every extracted concept to pages[0].
         metadata = {
             'batch_id': f"batch_{batch_idx}",
             'chunk_ids': [c.get('chunk_id', f"chunk_{i}") for i, c in enumerate(batch)],
             'num_chunks_in_batch': len(batch),
             'source_file': batch[0].get('source_file', 'unknown'),
-            'pages': list(set(c.get('page', 0) for c in batch)),
+            'pages': [c.get('page', 0) for c in batch],
             'task': 'extraction_batched'
         }
 
@@ -217,6 +222,21 @@ def create_batched_prompts(
             "Extract research context from the following passage.",
             f"Extract research context from the following {len(batch)} related passages. Process ALL passages together."
         )
+
+        # Append per-passage attribution instruction so the LLM can tell the
+        # parser which numbered Passage each concept was extracted from. The
+        # parser uses passage_index to look up the correct chunk_id and page
+        # from the batch metadata above; without this every concept in a
+        # batched prompt was being attributed to the FIRST passage.
+        if len(batch) > 1:
+            prompt += (
+                f"\n\n**IMPORTANT — Per-Concept Attribution (batched prompt):**\n"
+                f"There are {len(batch)} numbered passages above (Passage 1 through "
+                f"Passage {len(batch)}). For EVERY concept you extract, include an "
+                f"additional field `passage_index` whose integer value (1 to "
+                f"{len(batch)}) identifies which passage the concept came from. "
+                f"This is required for correct provenance — do not omit it."
+            )
 
         prompts.append({
             'prompt': prompt + "\n\n" + combined_text,

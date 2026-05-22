@@ -212,6 +212,92 @@ def test_chunk_positions_stay_within_text():
     return True
 
 
+def test_batched_passage_index_attribution():
+    """Regression (v4.0.4): each concept extracted from a batched prompt must
+    be attributed to its true source chunk via passage_index, not silently
+    defaulted to the first chunk in the batch."""
+    print("\n🎯 Testing Per-Concept Attribution in Batched Prompts (v4.0.4 regression)...")
+
+    import json as _json
+    from knowledge_extraction.extraction.concept_extractor import ConceptExtractorMCP
+    from knowledge_extraction.extraction.semantic_batch_optimizer import create_batched_prompts
+
+    # ----- 1. Batched-prompt metadata: pages must be a parallel LIST -----
+    chunks = [
+        {"text": "First passage about alpha.", "chunk_id": "p10c0",
+         "source_file": "x.pdf", "page": 10},
+        {"text": "Second passage about beta.", "chunk_id": "p10c1",
+         "source_file": "x.pdf", "page": 10},  # same page as above
+        {"text": "Third passage about gamma.", "chunk_id": "p11c0",
+         "source_file": "x.pdf", "page": 11},
+    ]
+    prompts = create_batched_prompts(
+        batches=[chunks],
+        prompt_template="**Passage**: Placeholder.\nExtract research context from the following passage.",
+    )
+    md = prompts[0]["metadata"]
+    assert isinstance(md["pages"], list) and len(md["pages"]) == 3, \
+        "pages must be a parallel list (length matches chunk_ids), not a set"
+    assert md["pages"] == [10, 10, 11], "pages must preserve order and duplicates"
+    assert "passage_index" in prompts[0]["prompt"], \
+        "batched prompt must instruct the LLM to emit passage_index"
+
+    # ----- 2. Parser must route concepts via passage_index -----
+    extractor = ConceptExtractorMCP()
+    response_text = _json.dumps({
+        "concepts": [
+            {"term": "Alpha", "definition": "Alpha def.", "category": "method",
+             "importance": "high", "justification": "From passage 1",
+             "quote": "alpha", "passage_index": 1},
+            {"term": "Beta", "definition": "Beta def.", "category": "method",
+             "importance": "high", "justification": "From passage 2",
+             "quote": "beta", "passage_index": 2},
+            {"term": "Gamma", "definition": "Gamma def.", "category": "method",
+             "importance": "high", "justification": "From passage 3",
+             "quote": "gamma", "passage_index": 3},
+        ]
+    })
+    concepts = extractor.parse_extraction_response(
+        response_text=response_text,
+        chunk_id="p10c0",      # response-level fallback (the buggy default)
+        source_file="x.pdf",
+        page=10,
+        chunk_ids=["p10c0", "p10c1", "p11c0"],
+        pages=[10, 10, 11],
+    )
+    by_term = {c.term: (c.chunk_id, c.page) for c in concepts}
+    assert by_term["Alpha"] == ("p10c0", 10)
+    assert by_term["Beta"]  == ("p10c1", 10)
+    assert by_term["Gamma"] == ("p11c0", 11), \
+        "Concept from passage 3 must be attributed to p11c0, not the first chunk"
+
+    # ----- 3. Legacy responses without passage_index still work -----
+    legacy_response = _json.dumps({
+        "concepts": [
+            {"term": "Legacy1", "definition": "d", "category": "method",
+             "importance": "high", "justification": "j", "quote": "q"},
+            {"term": "Legacy2", "definition": "d", "category": "method",
+             "importance": "high", "justification": "j", "quote": "q"},
+        ]
+    })
+    legacy_concepts = extractor.parse_extraction_response(
+        response_text=legacy_response,
+        chunk_id="p10c0",
+        source_file="x.pdf",
+        page=10,
+        chunk_ids=["p10c0", "p10c1"],
+        pages=[10, 11],
+    )
+    for c in legacy_concepts:
+        assert c.chunk_id == "p10c0" and c.page == 10, \
+            "Without passage_index, must fall back to response-level chunk_id/page"
+
+    print(f"  ✓ Batched metadata: pages parallel to chunk_ids (preserves duplicates)")
+    print(f"  ✓ Per-concept passage_index correctly routes attribution")
+    print(f"  ✓ Legacy responses (no passage_index) still parse via fallback")
+    return True
+
+
 def main():
     """Run all v4.0 enhancement tests"""
     print("\n" + "="*70)
@@ -223,6 +309,7 @@ def main():
         ("Progress Monitoring", test_progress_monitoring),
         ("Semantic Batching Integration", test_semantic_batching_integration),
         ("Chunk Position Drift (v4.0.3 regression)", test_chunk_positions_stay_within_text),
+        ("Batched Passage Index Attribution (v4.0.4 regression)", test_batched_passage_index_attribution),
     ]
 
     results = {}

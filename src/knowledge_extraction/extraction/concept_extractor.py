@@ -421,16 +421,25 @@ Validate:"""
         response_text: str,
         chunk_id: str,
         source_file: str,
-        page: int
+        page: int,
+        chunk_ids: list[str] | None = None,
+        pages: list[int] | None = None,
     ) -> list[ExtractedConcept]:
         """
         Parse Claude's response into ExtractedConcept objects.
 
         Args:
             response_text: Claude's JSON response
-            chunk_id: Chunk identifier (REQUIRED - must not be empty)
+            chunk_id: Fallback chunk identifier (REQUIRED — used when
+                passage_index absent)
             source_file: Source filename
-            page: Page number
+            page: Fallback page number (used when passage_index absent)
+            chunk_ids: Optional parallel list of chunk_ids for the batch, used
+                when each concept carries a 1..N passage_index identifying
+                which passage in a batched prompt it came from. Without these,
+                every concept in a batched prompt would be attributed to the
+                first passage.
+            pages: Optional parallel list of pages, same role as chunk_ids.
 
         Returns:
             List of validated concepts
@@ -458,6 +467,23 @@ Validate:"""
             # Create ExtractedConcept objects
             concepts = []
             for concept_dict in concepts_data.get('concepts', [])[:self.max_concepts_per_chunk]:
+                # Per-concept provenance via passage_index (1..N). Falls back
+                # to the response-level chunk_id/page when the LLM didn't
+                # emit passage_index (single-chunk prompts or legacy
+                # responses).
+                resolved_chunk_id = chunk_id
+                resolved_page = page
+                p_idx_raw = concept_dict.get('passage_index')
+                if chunk_ids and p_idx_raw is not None:
+                    try:
+                        p_idx = int(p_idx_raw)
+                    except (TypeError, ValueError):
+                        p_idx = None
+                    if p_idx and 1 <= p_idx <= len(chunk_ids):
+                        resolved_chunk_id = chunk_ids[p_idx - 1]
+                        if pages and p_idx - 1 < len(pages):
+                            resolved_page = pages[p_idx - 1]
+
                 concept = ExtractedConcept(
                     term=concept_dict.get('term', ''),
                     definition=concept_dict.get('definition', ''),
@@ -465,9 +491,9 @@ Validate:"""
                     importance=concept_dict.get('importance', 'medium'),
                     justification=concept_dict.get('justification', ''),
                     quote=concept_dict.get('quote', ''),
-                    chunk_id=chunk_id,
+                    chunk_id=resolved_chunk_id,
                     source_file=source_file,
-                    page=page
+                    page=resolved_page
                 )
                 concepts.append(concept)
 
