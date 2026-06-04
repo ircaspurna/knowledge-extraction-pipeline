@@ -38,8 +38,6 @@ def test_semantic_batching():
     print(f"  ✓ {len(test_chunks)} chunks → {len(batches)} prompts ({stats['reduction_pct']:.1f}% reduction)")
     print(f"  ✓ Average chunks per batch: {stats['avg_chunks_per_batch']:.1f}")
 
-    return True
-
 
 def test_progress_monitoring():
     """Test progress monitoring and metrics collection"""
@@ -93,8 +91,6 @@ def test_progress_monitoring():
     finally:
         shutil.rmtree(temp_dir)
 
-    return True
-
 
 def test_semantic_batching_integration():
     """Test semantic batching integration with concept extractor"""
@@ -140,8 +136,6 @@ def test_semantic_batching_integration():
 
     finally:
         shutil.rmtree(temp_dir)
-
-    return True
 
 
 def test_chunk_positions_stay_within_text():
@@ -209,7 +203,6 @@ def test_chunk_positions_stay_within_text():
     print(f"  ✓ Page distribution healthy "
           f"(top page {dominant_page}: {dominant_count} chunks, "
           f"{100*dominant_count/len(chunks):.0f}%)")
-    return True
 
 
 def test_batched_passage_index_attribution():
@@ -295,7 +288,6 @@ def test_batched_passage_index_attribution():
     print(f"  ✓ Batched metadata: pages parallel to chunk_ids (preserves duplicates)")
     print(f"  ✓ Per-concept passage_index correctly routes attribution")
     print(f"  ✓ Legacy responses (no passage_index) still parse via fallback")
-    return True
 
 
 def main():
@@ -315,9 +307,9 @@ def main():
     results = {}
     for test_name, test_func in tests:
         try:
-            success = test_func()
-            results[test_name] = success
-            print(f"  {'✅ PASS' if success else '❌ FAIL'}: {test_name}\n")
+            test_func()
+            results[test_name] = True
+            print(f"  ✅ PASS: {test_name}\n")
         except Exception as e:
             results[test_name] = False
             print(f"  ❌ FAIL: {test_name}")

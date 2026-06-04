@@ -5,7 +5,7 @@ A complete system for extracting knowledge from academic PDFs and building
 interactive knowledge graphs using Claude MCP.
 """
 
-__version__ = "2.2.0"
+__version__ = "4.0.4"
 __author__ = "IRI"
 __license__ = "MIT"
 
